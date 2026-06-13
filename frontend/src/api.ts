@@ -32,7 +32,7 @@ export interface MoveResult {
 
 // Generic POST helper: serializes the body to JSON and parses the JSON reply.
 // `async` functions return a Promise (JS's await/async, like Python coroutines).
-async function postJson<T>(url: string, body?: unknown): Promise<T> {
+const postJson = async <T>(url: string, body?: unknown): Promise<T> => {
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -45,12 +45,11 @@ async function postJson<T>(url: string, body?: unknown): Promise<T> {
 }
 
 /** Starts a new game and returns its initial board. */
-export async function newGame(): Promise<Board> {
+export const newGame = async (): Promise<Board> => {
   const data = await postJson<NewGameResponse>('/api/new')
   return data.board
 }
 
 /** Applies a move to the given board and returns the outcome. */
-export function move(board: Board, direction: Direction): Promise<MoveResult> {
-  return postJson<MoveResult>('/api/move', { board, direction })
-}
+export const move = (board: Board, direction: Direction): Promise<MoveResult> =>
+  postJson<MoveResult>('/api/move', { board, direction })

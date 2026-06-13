@@ -32,7 +32,7 @@ export interface UseGame {
  * API, which returns the next board; the score is accumulated on the client.
  * Arrow keys (and WASD) are bound while a game is in progress.
  */
-export function useGame(): UseGame {
+export const useGame = (): UseGame => {
   // useState returns [currentValue, setter]; calling the setter re-renders the UI.
   const [board, setBoard] = useState<Board>([])
   const [score, setScore] = useState(0)

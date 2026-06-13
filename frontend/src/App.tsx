@@ -5,7 +5,7 @@ import { Scoreboard } from './components/Scoreboard/Scoreboard'
 import { useGame } from './hooks/useGame'
 
 // Top-level component: wires game state to the UI pieces.
-function App() {
+const App = () => {
   // Pull live game state + actions from the custom hook (see hooks/useGame.ts).
   const { board, score, status, start } = useGame()
 

@@ -10,7 +10,7 @@ interface TileProps {
  * cells show their value and a value-specific colour class (`tile-2`,
  * `tile-4`, ...), capped at `tile-super` for very large tiles.
  */
-export function Tile({ value }: TileProps) {
+export const Tile = ({ value }: TileProps) => {
   // Pick a CSS class based on the tile value so each value gets its own colour.
   const className =
     value === null

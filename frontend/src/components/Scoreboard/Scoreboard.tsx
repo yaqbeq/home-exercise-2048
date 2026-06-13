@@ -5,7 +5,7 @@ interface ScoreboardProps {
 }
 
 /** Displays the current score. */
-export function Scoreboard({ score }: ScoreboardProps) {
+export const Scoreboard = ({ score }: ScoreboardProps) => {
   return (
     <div className="scoreboard">
       <span className="scoreboard-label">Score</span>

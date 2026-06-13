@@ -10,7 +10,7 @@ interface ControlsProps {
  * The primary action button. Before a game it reads "Start Game"; once a game
  * has begun (or ended) it reads "Reset" and starts a fresh board.
  */
-export function Controls({ status, onStart }: ControlsProps) {
+export const Controls = ({ status, onStart }: ControlsProps) => {
   const label = status === 'idle' ? 'Start Game' : 'Reset'
   // `onClick` wires the button to the callback passed in from the parent.
   return (

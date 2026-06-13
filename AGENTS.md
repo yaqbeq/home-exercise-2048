@@ -160,6 +160,10 @@ count range, odds of spawning a `4`, win value).
 - **Style (Prettier — see `frontend/.prettierrc.json`):** single quotes, **no
   semicolons**, trailing commas, 2-space indent, 80-col print width, LF endings.
   Run `npm run format` before committing.
+- **Functions:** prefer **arrow functions** (`const fn = () => …`) everywhere —
+  components, hooks, helpers, and callbacks. Only fall back to the `function`
+  keyword when an arrow cannot express it (e.g. you need hoisting or a custom
+  `this`/`arguments` binding), which should be rare in this codebase.
 - **Components:** function components, one per file, named exports.
 - **Data flow:** keep game state in `useGame`; components stay presentational.
 - **API calls:** go through `src/api.ts`; use the native `fetch` (no axios).

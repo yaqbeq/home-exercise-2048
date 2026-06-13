@@ -6,8 +6,8 @@ interface BoardProps {
   board: BoardType
 }
 
-/** Renders the grid of tiles. Layout is handled by CSS Grid in App.css. */
-export function Board({ board }: BoardProps) {
+/** Renders the grid of tiles. Layout is handled by CSS Grid in Board.css. */
+export const Board = ({ board }: BoardProps) => {
   return (
     <div className="board">
       {/* Flatten the 2D board into a list of <Tile> elements. */}
