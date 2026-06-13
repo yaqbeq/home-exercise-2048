@@ -1,12 +1,17 @@
 [project]
-name = "home-exercise-2048"
+name = "game2048"
 version = "0.1.0"
-description = "2048 game implementation"
-readme = "README.md"
+description = "2048 game — core engine (backend)"
+readme = "../README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "ruff>=0.15.17",
-]
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/game2048"]
 
 [tool.ruff]
 line-length = 100
@@ -70,10 +75,12 @@ strict_equality = true
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-pythonpath = ["backend"]
+# The package is installed into the environment via `uv sync`, so no sys.path
+# manipulation is needed; tests import `game2048` like any other dependency.
 testpaths = ["tests"]
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "ruff>=0.15.17",
 ]

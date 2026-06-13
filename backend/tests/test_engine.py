@@ -10,8 +10,9 @@ These tests cover the requirements:
 import random
 
 import pytest
-from app import game_engine
-from app.game_engine import (
+
+from game2048 import config
+from game2048.engine import (
     Game,
     generate_initial_board,
     get_empty_cells,
@@ -89,7 +90,7 @@ def test_generate_initial_board_count_within_range():
     for _ in range(50):
         board = generate_initial_board()
         filled = sum(1 for row in board for cell in row if cell is not None)
-        assert game_engine.MIN_INITIAL_NUMBERS <= filled <= game_engine.MAX_INITIAL_NUMBERS
+        assert config.MIN_INITIAL_NUMBERS <= filled <= config.MAX_INITIAL_NUMBERS
 
 
 def test_generate_initial_board_custom_size():
@@ -253,7 +254,7 @@ def test_has_available_moves_with_empty_cells():
 
 
 def test_has_available_moves_full_board_with_merge():
-    board = [
+    board: list[list[int | None]] = [
         [2, 2, 4, 8],
         [4, 8, 16, 32],
         [2, 4, 8, 16],
@@ -263,7 +264,7 @@ def test_has_available_moves_full_board_with_merge():
 
 
 def test_has_available_moves_lose_board():
-    board = [
+    board: list[list[int | None]] = [
         [2, 4, 2, 4],
         [4, 2, 4, 2],
         [2, 4, 2, 4],
@@ -310,7 +311,7 @@ def test_game_initial_state():
     assert game.game_over is False
     assert game.win is False
     filled = sum(1 for row in game.board for cell in row if cell is not None)
-    assert game_engine.MIN_INITIAL_NUMBERS <= filled <= game_engine.MAX_INITIAL_NUMBERS
+    assert config.MIN_INITIAL_NUMBERS <= filled <= config.MAX_INITIAL_NUMBERS
 
 
 def test_game_invalid_direction_raises():

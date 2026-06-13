@@ -1,28 +1,23 @@
 {
   /* PYTHON PROJECT SETTINGS */
 
-  /* Python Environment - Auto-detected cross-platform */
+  /* Python Environment - backend project venv (created by `uv sync`) */
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
   "python.terminal.activateEnvironment": true,
   "python.terminal.executeInFileDir": false,
-  "python.analysis.extraPaths": [
-    "${workspaceFolder}",
-    "${workspaceFolder}/backend"
-  ],
-  "python.autoComplete.extraPaths": [
-    "${workspaceFolder}",
-    "${workspaceFolder}/backend"
-  ],
+  "python.analysis.extraPaths": ["${workspaceFolder}/backend/src"],
+  "python.autoComplete.extraPaths": ["${workspaceFolder}/backend/src"],
 
   /* Terminal */
   "terminal.integrated.cwd": "${workspaceFolder}",
   "terminal.integrated.env.linux": {
-    "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
+    "PYTHONPATH": "${workspaceFolder}/backend/src:${env:PYTHONPATH}"
   },
   "terminal.integrated.env.osx": {
-    "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
+    "PYTHONPATH": "${workspaceFolder}/backend/src:${env:PYTHONPATH}"
   },
   "terminal.integrated.env.windows": {
-    "PYTHONPATH": "${workspaceFolder};${env:PYTHONPATH}"
+    "PYTHONPATH": "${workspaceFolder}/backend/src;${env:PYTHONPATH}"
   },
 
   /* Python Formatting and Linting with Ruff */
@@ -57,8 +52,17 @@
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  "python.testing.cwd": "${workspaceFolder}/backend",
+  "python.testing.pytestArgs": ["tests"],
 
   /* File Exclusions - Improve performance */
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true,
+    "**/*.pyc": true,
+    "**/.venv": true
+  },
   "files.watcherExclude": {
     "**/.venv/**": true,
     "**/__pycache__/**": true,
@@ -80,10 +84,7 @@
   "git.confirmSync": false,
   "git.enableSmartCommit": true,
   "cursorpyright.analysis.autoImportCompletions": true,
-  "cursorpyright.analysis.extraPaths": [
-    "${workspaceFolder}",
-    "${workspaceFolder}/backend"
-  ],
+  "cursorpyright.analysis.extraPaths": ["${workspaceFolder}/backend/src"],
   "cursorpyright.analysis.inlayHints.functionReturnTypes": true,
   "cursorpyright.analysis.inlayHints.variableTypes": true,
   "cursorpyright.analysis.typeCheckingMode": "basic",

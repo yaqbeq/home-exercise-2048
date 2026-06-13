@@ -12,23 +12,23 @@ wheels = [
 ]
 
 [[package]]
-name = "home-exercise-2048"
+name = "game2048"
 version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "ruff" },
-]
+source = { editable = "." }
 
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "ruff", specifier = ">=0.15.17" }]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.0.3" }]
+dev = [
+    { name = "pytest", specifier = ">=9.0.3" },
+    { name = "ruff", specifier = ">=0.15.17" },
+]
 
 [[package]]
 name = "iniconfig"

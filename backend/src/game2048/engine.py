@@ -1,10 +1,12 @@
 import random
 
-BOARD_SIZE = 4
-MIN_INITIAL_NUMBERS = 2
-MAX_INITIAL_NUMBERS = 8
-CHANCE_OF_FOUR = 0.1  # typical for 2048 games
-WIN_VALUE = 2048
+from game2048.config import (
+    BOARD_SIZE,
+    CHANCE_OF_FOUR,
+    MAX_INITIAL_NUMBERS,
+    MIN_INITIAL_NUMBERS,
+    WIN_VALUE,
+)
 
 
 def get_empty_cells(board: list[list[int | None]]) -> list[tuple[int, int]]:
