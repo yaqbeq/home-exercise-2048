@@ -6,7 +6,7 @@
   "python.terminal.executeInFileDir": false,
   "python.analysis.extraPaths": [
     "${workspaceFolder}",
-    "${workspaceFolder}/src"
+    "${workspaceFolder}/backend"
   ],
   "python.autoComplete.extraPaths": [
     "${workspaceFolder}",
@@ -82,7 +82,7 @@
   "cursorpyright.analysis.autoImportCompletions": true,
   "cursorpyright.analysis.extraPaths": [
     "${workspaceFolder}",
-    "${workspaceFolder}/src"
+    "${workspaceFolder}/backend"
   ],
   "cursorpyright.analysis.inlayHints.functionReturnTypes": true,
   "cursorpyright.analysis.inlayHints.variableTypes": true,

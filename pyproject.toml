@@ -68,3 +68,12 @@ warn_unused_ignores = true
 warn_no_return = true
 strict_equality = true
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = ["backend"]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

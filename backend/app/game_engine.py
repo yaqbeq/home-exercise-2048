@@ -4,6 +4,7 @@ BOARD_SIZE = 4
 MIN_INITIAL_NUMBERS = 2
 MAX_INITIAL_NUMBERS = 8
 CHANCE_OF_FOUR = 0.1  # typical for 2048 games
+WIN_VALUE = 2048
 
 
 def get_empty_cells(board: list[list[int | None]]) -> list[tuple[int, int]]:
@@ -123,6 +124,11 @@ def has_available_moves(board: list[list[int | None]]) -> bool:
     return any(move(board)[0] != board for move in (move_left, move_right, move_up, move_down))
 
 
+def has_won(board: list[list[int | None]], win_value: int = WIN_VALUE) -> bool:
+    """Returns True if any tile on the board has reached the winning value."""
+    return any(cell is not None and cell >= win_value for row in board for cell in row)
+
+
 class Game:
     def __init__(self):
         self.board = generate_initial_board()
@@ -148,9 +154,10 @@ class Game:
             self.board = new_board
             self.score += score_gained
             place_number(self.board)
-            # if no moves are available the move, the game is over
-            if self.score >= 2048:
+            # if any tile reached the winning value, the game is won and over
+            if has_won(self.board):
                 self.win = True
                 self.game_over = True
+            # if no moves are available after the move, the game is over
             if not has_available_moves(self.board):
                 self.game_over = True
