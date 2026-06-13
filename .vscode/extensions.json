@@ -17,6 +17,13 @@
     // ============================================
     // DOCUMENTATION
     // ============================================
-    "davidanson.vscode-markdownlint" // markdownlint
+    "davidanson.vscode-markdownlint", // markdownlint
+
+    // ============================================
+    // FRONTEND DEVELOPMENT
+    // ============================================
+    "dbaeumer.vscode-eslint", // ESLint
+    "esbenp.prettier-vscode" // Prettier
+
   ]
 }

@@ -1,0 +1,36 @@
+:root {
+  /* Board + tile palette (classic 2048 look). */
+  --bg: #faf8ef;
+  --text: #776e65;
+  --board-bg: #bbada0;
+  --cell-bg: #cdc1b4;
+  --button-bg: #8f7a66;
+  --button-bg-hover: #9c8775;
+  --button-text: #f9f6f2;
+
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  display: flex;
+  justify-content: center;
+}
+
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}

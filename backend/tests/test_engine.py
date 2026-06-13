@@ -7,13 +7,10 @@ These tests cover the requirements:
 - detecting win (a 2048 tile) and lose (no moves) conditions.
 """
 
-import random
-
 import pytest
 
 from game2048 import config
 from game2048.engine import (
-    Game,
     generate_initial_board,
     get_empty_cells,
     has_available_moves,
@@ -300,111 +297,3 @@ def test_has_won_above_win_value():
     board: list[list[int | None]] = [[None] * 4 for _ in range(4)]
     board[0][0] = 4096
     assert has_won(board) is True
-
-
-# --------------------------------------------------------------------------- #
-# Game
-# --------------------------------------------------------------------------- #
-def test_game_initial_state():
-    game = Game()
-    assert game.score == 0
-    assert game.game_over is False
-    assert game.win is False
-    filled = sum(1 for row in game.board for cell in row if cell is not None)
-    assert config.MIN_INITIAL_NUMBERS <= filled <= config.MAX_INITIAL_NUMBERS
-
-
-def test_game_invalid_direction_raises():
-    game = Game()
-    with pytest.raises(ValueError):
-        game.move('diagonal')
-
-
-def test_game_valid_move_adds_tile_and_score(monkeypatch):
-    # Force any newly placed tile to be a 2 in a deterministic empty cell.
-    monkeypatch.setattr(random, 'random', lambda: 1.0)  # chance_of_four never triggers
-    game = Game()
-    game.board = [
-        [2, 2, None, None],
-        [None, None, None, None],
-        [None, None, None, None],
-        [None, None, None, None],
-    ]
-    game.score = 0
-    game.move('left')
-    # The 2+2 merge yields a 4 and a score of 4.
-    assert game.score == 4
-    counts = count_values(game.board)
-    assert counts.get(4) == 1
-    # A new tile was added, so there should be two non-empty cells total.
-    filled = sum(1 for row in game.board for cell in row if cell is not None)
-    assert filled == 2
-
-
-def test_game_move_no_change_does_not_add_tile():
-    game = Game()
-    game.board = [
-        [2, 4, None, None],
-        [None, None, None, None],
-        [None, None, None, None],
-        [None, None, None, None],
-    ]
-    game.score = 0
-    snapshot = [row[:] for row in game.board]
-    game.move('left')  # already left-aligned, no change
-    assert game.board == snapshot
-    assert game.score == 0
-
-
-def test_game_win_detection():
-    game = Game()
-    game.board = [
-        [1024, 1024, None, None],
-        [None, None, None, None],
-        [None, None, None, None],
-        [None, None, None, None],
-    ]
-    game.score = 0
-    game.move('left')  # merges into 2048
-    assert game.win is True
-    assert game.game_over is True
-
-
-def test_game_move_ignored_when_over():
-    game = Game()
-    game.game_over = True
-    game.board = [
-        [2, 2, None, None],
-        [None, None, None, None],
-        [None, None, None, None],
-        [None, None, None, None],
-    ]
-    snapshot = [row[:] for row in game.board]
-    game.move('left')
-    assert game.board == snapshot
-    assert game.score == 0
-
-
-def test_game_lose_detection(monkeypatch):
-    # Force the newly placed tile to be a 4 (random() < CHANCE_OF_FOUR).
-    monkeypatch.setattr(random, 'random', lambda: 0.0)
-    game = Game()
-    # One empty cell at (2, 0). Moving up compacts column 0 from
-    # [2, 4, None, 2] -> [2, 4, 2, None], then a forced 4 fills (3, 0),
-    # producing a fully-locked checkerboard with no possible merges.
-    game.board = [
-        [2, 4, 2, 4],
-        [4, 2, 4, 2],
-        [None, 4, 2, 4],
-        [2, 2, 4, 2],
-    ]
-    game.score = 0
-    game.move('up')
-    assert game.board == [
-        [2, 4, 2, 4],
-        [4, 2, 4, 2],
-        [2, 4, 2, 4],
-        [4, 2, 4, 2],
-    ]
-    assert game.game_over is True
-    assert game.win is False

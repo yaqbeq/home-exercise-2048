@@ -1,0 +1,222 @@
+.app {
+  width: 100%;
+  max-width: 480px;
+  padding: 24px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 64px;
+  font-weight: 800;
+  margin: 0;
+  color: #776e65;
+}
+
+.instructions {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.instructions strong {
+  color: #776e65;
+}
+
+/* Scoreboard ------------------------------------------------------------- */
+.scoreboard {
+  background: var(--board-bg);
+  border-radius: 6px;
+  padding: 8px 20px;
+  color: var(--button-text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 96px;
+}
+
+.scoreboard-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #eee4da;
+}
+
+.scoreboard-value {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+/* Board ------------------------------------------------------------------ */
+.board-area {
+  position: relative;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  background: var(--board-bg);
+  border-radius: 8px;
+  padding: 12px;
+  aspect-ratio: 1 / 1;
+}
+
+.board-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--button-text);
+  font-size: 16px;
+  text-align: center;
+}
+
+/* Tiles ------------------------------------------------------------------ */
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: clamp(20px, 7vw, 34px);
+  color: #776e65;
+  background: var(--cell-bg);
+  /* Smoothly animate colour and a subtle pop when a tile changes. */
+  transition:
+    background-color 0.15s ease-in-out,
+    color 0.15s ease-in-out,
+    transform 0.1s ease-in-out;
+}
+
+.tile-empty {
+  background: var(--cell-bg);
+}
+
+.tile-2 {
+  background: #eee4da;
+}
+.tile-4 {
+  background: #ede0c8;
+}
+.tile-8 {
+  background: #f2b179;
+  color: #f9f6f2;
+}
+.tile-16 {
+  background: #f59563;
+  color: #f9f6f2;
+}
+.tile-32 {
+  background: #f67c5f;
+  color: #f9f6f2;
+}
+.tile-64 {
+  background: #f65e3b;
+  color: #f9f6f2;
+}
+.tile-128 {
+  background: #edcf72;
+  color: #f9f6f2;
+  font-size: clamp(18px, 6vw, 30px);
+}
+.tile-256 {
+  background: #edcc61;
+  color: #f9f6f2;
+  font-size: clamp(18px, 6vw, 30px);
+}
+.tile-512 {
+  background: #edc850;
+  color: #f9f6f2;
+  font-size: clamp(18px, 6vw, 30px);
+}
+.tile-1024 {
+  background: #edc53f;
+  color: #f9f6f2;
+  font-size: clamp(15px, 5vw, 26px);
+}
+.tile-2048 {
+  background: #edc22e;
+  color: #f9f6f2;
+  font-size: clamp(15px, 5vw, 26px);
+}
+.tile-super {
+  background: #3c3a32;
+  color: #f9f6f2;
+  font-size: clamp(14px, 4.5vw, 24px);
+}
+
+/* Non-empty tiles pop slightly to draw the eye. */
+.tile:not(.tile-empty) {
+  transform: scale(1.02);
+}
+
+/* End-game overlay ------------------------------------------------------- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  animation: overlay-fade 0.2s ease-in-out;
+}
+
+.overlay-won {
+  background: rgba(237, 194, 46, 0.5);
+}
+
+.overlay-lost {
+  background: rgba(238, 228, 218, 0.73);
+}
+
+.overlay-message {
+  font-size: 40px;
+  font-weight: 800;
+  color: #776e65;
+}
+
+@keyframes overlay-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Controls --------------------------------------------------------------- */
+.controls {
+  display: flex;
+  justify-content: center;
+}
+
+.control-button {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--button-text);
+  background: var(--button-bg);
+  transition: background-color 0.15s ease-in-out;
+}
+
+.control-button:hover {
+  background: var(--button-bg-hover);
+}
+
+.control-button:focus-visible {
+  outline: 3px solid #bbada0;
+  outline-offset: 2px;
+}

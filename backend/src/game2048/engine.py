@@ -129,37 +129,3 @@ def has_available_moves(board: list[list[int | None]]) -> bool:
 def has_won(board: list[list[int | None]], win_value: int = WIN_VALUE) -> bool:
     """Returns True if any tile on the board has reached the winning value."""
     return any(cell is not None and cell >= win_value for row in board for cell in row)
-
-
-class Game:
-    def __init__(self):
-        self.board = generate_initial_board()
-        self.score = 0
-        self.game_over = False
-        self.win = False
-
-    def move(self, direction: str) -> None:
-        if self.game_over:
-            return
-        if direction == 'left':
-            new_board, score_gained = move_left(self.board)
-        elif direction == 'right':
-            new_board, score_gained = move_right(self.board)
-        elif direction == 'up':
-            new_board, score_gained = move_up(self.board)
-        elif direction == 'down':
-            new_board, score_gained = move_down(self.board)
-        else:
-            raise ValueError('Invalid move direction')
-        # check if the move changed the board, if so update the state, place a new number, and check for game over
-        if new_board != self.board:
-            self.board = new_board
-            self.score += score_gained
-            place_number(self.board)
-            # if any tile reached the winning value, the game is won and over
-            if has_won(self.board):
-                self.win = True
-                self.game_over = True
-            # if no moves are available after the move, the game is over
-            if not has_available_moves(self.board):
-                self.game_over = True
