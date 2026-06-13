@@ -1,14 +1,17 @@
 import './App.css'
-import { Board } from './components/Board'
-import { Controls } from './components/Controls'
-import { Scoreboard } from './components/Scoreboard'
+import { Board } from './components/Board/Board'
+import { Controls } from './components/Controls/Controls'
+import { Scoreboard } from './components/Scoreboard/Scoreboard'
 import { useGame } from './hooks/useGame'
 
+// Top-level component: wires game state to the UI pieces.
 function App() {
+  // Pull live game state + actions from the custom hook (see hooks/useGame.ts).
   const { board, score, status, start } = useGame()
 
   const hasBoard = board.length > 0
 
+  // JSX below is the rendered UI; `{...}` embeds JS expressions into the markup.
   return (
     <main className="app">
       <header className="app-header">

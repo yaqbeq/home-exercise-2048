@@ -1,0 +1,71 @@
+/* Global stylesheet: design tokens + base resets.
+ *
+ * All colours, radii, spacing, and timing live here as CSS custom properties
+ * (variables) so components reference tokens instead of hard-coded values. */
+
+:root {
+  /* Surface palette (classic 2048 look). */
+  --color-bg: #faf8ef;
+  --color-text: #776e65;
+  --color-board-bg: #bbada0;
+  --color-cell-bg: #cdc1b4;
+
+  /* Buttons. */
+  --color-button-bg: #8f7a66;
+  --color-button-bg-hover: #9c8775;
+  --color-button-text: #f9f6f2;
+
+  /* Tile palette, keyed by value. */
+  --color-tile-2: #eee4da;
+  --color-tile-4: #ede0c8;
+  --color-tile-8: #f2b179;
+  --color-tile-16: #f59563;
+  --color-tile-32: #f67c5f;
+  --color-tile-64: #f65e3b;
+  --color-tile-128: #edcf72;
+  --color-tile-256: #edcc61;
+  --color-tile-512: #edc850;
+  --color-tile-1024: #edc53f;
+  --color-tile-2048: #edc22e;
+  --color-tile-super: #3c3a32;
+  --color-tile-light-text: #f9f6f2;
+
+  /* Overlay tints. */
+  --color-overlay-won: rgba(237, 194, 46, 0.5);
+  --color-overlay-lost: rgba(238, 228, 218, 0.73);
+  --color-focus-ring: #bbada0;
+
+  /* Spacing / shape / motion tokens. */
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --transition-fast: 0.15s ease-in-out;
+
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  display: flex;
+  justify-content: center;
+}
+
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}

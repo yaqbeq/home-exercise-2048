@@ -30,6 +30,8 @@ export interface MoveResult {
   game_over: boolean
 }
 
+// Generic POST helper: serializes the body to JSON and parses the JSON reply.
+// `async` functions return a Promise (JS's await/async, like Python coroutines).
 async function postJson<T>(url: string, body?: unknown): Promise<T> {
   const response = await fetch(url, {
     method: 'POST',

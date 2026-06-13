@@ -1,0 +1,78 @@
+/* A single tile. Colour is driven by the value-specific class below. */
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: clamp(20px, 7vw, 34px);
+  color: var(--color-text);
+  background: var(--color-cell-bg);
+  /* Smoothly animate colour and a subtle pop when a tile changes. */
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    transform 0.1s ease-in-out;
+}
+
+.tile-empty {
+  background: var(--color-cell-bg);
+}
+
+.tile-2 {
+  background: var(--color-tile-2);
+}
+.tile-4 {
+  background: var(--color-tile-4);
+}
+.tile-8 {
+  background: var(--color-tile-8);
+  color: var(--color-tile-light-text);
+}
+.tile-16 {
+  background: var(--color-tile-16);
+  color: var(--color-tile-light-text);
+}
+.tile-32 {
+  background: var(--color-tile-32);
+  color: var(--color-tile-light-text);
+}
+.tile-64 {
+  background: var(--color-tile-64);
+  color: var(--color-tile-light-text);
+}
+.tile-128 {
+  background: var(--color-tile-128);
+  color: var(--color-tile-light-text);
+  font-size: clamp(18px, 6vw, 30px);
+}
+.tile-256 {
+  background: var(--color-tile-256);
+  color: var(--color-tile-light-text);
+  font-size: clamp(18px, 6vw, 30px);
+}
+.tile-512 {
+  background: var(--color-tile-512);
+  color: var(--color-tile-light-text);
+  font-size: clamp(18px, 6vw, 30px);
+}
+.tile-1024 {
+  background: var(--color-tile-1024);
+  color: var(--color-tile-light-text);
+  font-size: clamp(15px, 5vw, 26px);
+}
+.tile-2048 {
+  background: var(--color-tile-2048);
+  color: var(--color-tile-light-text);
+  font-size: clamp(15px, 5vw, 26px);
+}
+.tile-super {
+  background: var(--color-tile-super);
+  color: var(--color-tile-light-text);
+  font-size: clamp(14px, 4.5vw, 24px);
+}
+
+/* Non-empty tiles pop slightly to draw the eye. */
+.tile:not(.tile-empty) {
+  transform: scale(1.02);
+}

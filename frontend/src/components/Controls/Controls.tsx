@@ -1,4 +1,5 @@
-import type { GameStatus } from '../hooks/useGame'
+import type { GameStatus } from '../../hooks/useGame'
+import './Controls.css'
 
 interface ControlsProps {
   status: GameStatus
@@ -11,6 +12,7 @@ interface ControlsProps {
  */
 export function Controls({ status, onStart }: ControlsProps) {
   const label = status === 'idle' ? 'Start Game' : 'Reset'
+  // `onClick` wires the button to the callback passed in from the parent.
   return (
     <button type="button" className="control-button" onClick={onStart}>
       {label}

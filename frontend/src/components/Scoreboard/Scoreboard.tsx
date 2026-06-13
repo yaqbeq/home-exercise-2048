@@ -1,3 +1,5 @@
+import './Scoreboard.css'
+
 interface ScoreboardProps {
   score: number
 }

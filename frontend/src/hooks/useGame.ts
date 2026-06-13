@@ -33,10 +33,12 @@ export interface UseGame {
  * Arrow keys (and WASD) are bound while a game is in progress.
  */
 export function useGame(): UseGame {
+  // useState returns [currentValue, setter]; calling the setter re-renders the UI.
   const [board, setBoard] = useState<Board>([])
   const [score, setScore] = useState(0)
   const [status, setStatus] = useState<GameStatus>('idle')
 
+  // useCallback memoizes the function so it keeps a stable identity across renders.
   const start = useCallback(() => {
     newGame()
       .then((fresh) => {
@@ -72,6 +74,8 @@ export function useGame(): UseGame {
     [board, status],
   )
 
+  // useEffect runs side effects after render; the cleanup it returns runs before
+  // the next effect / on unmount. Re-runs whenever a value in [deps] changes.
   // Bind keyboard controls only while a game is in progress.
   useEffect(() => {
     if (status !== 'playing') {

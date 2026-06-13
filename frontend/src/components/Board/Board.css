@@ -1,0 +1,19 @@
+/* Board grid (also used by the empty-board placeholder in App). */
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+  background: var(--color-board-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  aspect-ratio: 1 / 1;
+}
+
+.board-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-button-text);
+  font-size: 16px;
+  text-align: center;
+}
