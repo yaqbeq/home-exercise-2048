@@ -22,10 +22,10 @@ def place_number(board: list[list[int | None]], chance_of_four: float = CHANCE_O
     """
     empty_cells = get_empty_cells(board)
     if not empty_cells:
-        return False
+        return True
     row, cell = random.choice(empty_cells)
     board[row][cell] = 4 if random.random() < chance_of_four else 2
-    return True
+    return False
 
 
 def generate_initial_board(
@@ -43,3 +43,82 @@ def generate_initial_board(
     for _ in range(num_initial_numbers):
         place_number(board, chance_of_four=0)  # only 2s for initial placement
     return board
+
+
+def merge_row_left(row: list[int | None]) -> tuple[list[int | None], int]:
+    """Merges a single row to the left, combining equal adjacent numbers.
+    Returns the merged row (same length, padded with None) and the score gained.
+    """
+    filtered_row = [num for num in row if num is not None]
+    combined_row = []
+    score_gained = 0
+    skip_next = False
+    for i in range(len(filtered_row)):
+        # if the previous number was combined, skip this one
+        if skip_next:
+            skip_next = False
+            continue
+        # combine the current number with the next one if they are the same and it is not the last number in the row
+        if i + 1 < len(filtered_row) and filtered_row[i] == filtered_row[i + 1]:
+            combined_value = filtered_row[i] * 2
+            combined_row.append(combined_value)
+            score_gained += combined_value
+            skip_next = True
+        else:
+            combined_row.append(filtered_row[i])
+    # fill the rest of the row with None values
+    combined_row.extend([None] * (len(row) - len(combined_row)))
+    return combined_row, score_gained
+
+
+def move_left(board: list[list[int | None]]) -> tuple[list[list[int | None]], int]:
+    """Moves the game board to the left, combining numbers as needed.
+    Returns the new board and the score gained from the move.
+    """
+    new_board: list[list[int | None]] = []
+    score_gained = 0
+    for row in board:
+        merged_row, row_score = merge_row_left(row)
+        new_board.append(merged_row)
+        score_gained += row_score
+    return new_board, score_gained
+
+
+def move_right(board: list[list[int | None]]) -> tuple[list[list[int | None]], int]:
+    """Moves the game board to the right, combining numbers as needed.
+    Returns the new board and the score gained from the move.
+    """
+    # reverse each row, move left, then reverse again
+    reversed_board = [row[::-1] for row in board]
+    new_board, score_gained = move_left(reversed_board)
+    new_board = [row[::-1] for row in new_board]
+    return new_board, score_gained
+
+
+def move_up(board: list[list[int | None]]) -> tuple[list[list[int | None]], int]:
+    """Moves the game board up, combining numbers as needed.
+    Returns the new board and the score gained from the move.
+    """
+    # transpose the board, move left, then transpose again
+    transposed_board = [list(row) for row in zip(*board)]
+    new_board, score_gained = move_left(transposed_board)
+    new_board = [list(row) for row in zip(*new_board)]
+    return new_board, score_gained
+
+
+def move_down(board: list[list[int | None]]) -> tuple[list[list[int | None]], int]:
+    """Moves the game board down, combining numbers as needed.
+    Returns the new board and the score gained from the move.
+    """
+    # transpose the board, move right, then transpose again
+    transposed_board = [list(row) for row in zip(*board)]
+    new_board, score_gained = move_right(transposed_board)
+    new_board = [list(row) for row in zip(*new_board)]
+    return new_board, score_gained
+
+
+class Game:
+    def __init__(self):
+        self.board = generate_initial_board()
+        self.score = 0
+        self.game_over = False
