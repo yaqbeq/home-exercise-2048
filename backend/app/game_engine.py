@@ -16,16 +16,13 @@ def get_empty_cells(board: list[list[int | None]]) -> list[tuple[int, int]]:
     return empty_cells
 
 
-def place_number(board: list[list[int | None]], chance_of_four: float = CHANCE_OF_FOUR) -> bool:
-    """Places a number on a random empty cell on the game board.
-    Returns True if the number was placed successfully, False if there are no empty cells.
-    """
+def place_number(board: list[list[int | None]], chance_of_four: float = CHANCE_OF_FOUR) -> None:
+    """Places a number on a random empty cell on the game board."""
     empty_cells = get_empty_cells(board)
     if not empty_cells:
-        return True
+        return
     row, cell = random.choice(empty_cells)
     board[row][cell] = 4 if random.random() < chance_of_four else 2
-    return False
 
 
 def generate_initial_board(
@@ -117,8 +114,43 @@ def move_down(board: list[list[int | None]]) -> tuple[list[list[int | None]], in
     return new_board, score_gained
 
 
+def has_available_moves(board: list[list[int | None]]) -> bool:
+    """Returns True if any move would change the board (i.e. the game can continue)."""
+    # cheap check: if there are any empty cells, we can move
+    if get_empty_cells(board):
+        return True
+    # more expensive check: if any move would change the board, we can move
+    return any(move(board)[0] != board for move in (move_left, move_right, move_up, move_down))
+
+
 class Game:
     def __init__(self):
         self.board = generate_initial_board()
         self.score = 0
         self.game_over = False
+        self.win = False
+
+    def move(self, direction: str) -> None:
+        if self.game_over:
+            return
+        if direction == 'left':
+            new_board, score_gained = move_left(self.board)
+        elif direction == 'right':
+            new_board, score_gained = move_right(self.board)
+        elif direction == 'up':
+            new_board, score_gained = move_up(self.board)
+        elif direction == 'down':
+            new_board, score_gained = move_down(self.board)
+        else:
+            raise ValueError('Invalid move direction')
+        # check if the move changed the board, if so update the state, place a new number, and check for game over
+        if new_board != self.board:
+            self.board = new_board
+            self.score += score_gained
+            place_number(self.board)
+            # if no moves are available the move, the game is over
+            if self.score >= 2048:
+                self.win = True
+                self.game_over = True
+            if not has_available_moves(self.board):
+                self.game_over = True
