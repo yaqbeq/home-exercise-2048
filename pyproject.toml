@@ -1,0 +1,56 @@
+[project]
+name = "home-exercise-2048"
+version = "0.1.0"
+description = "2048 game implementation"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "ruff>=0.15.17",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+preview = true
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
+line-ending = "lf"
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # pep8-naming
+    "N",
+    # pylint basic checks
+    "PL",
+]
+# Require key-value pairs in new line
+extend-select = ["E231", "E241"]
+
+# Ignore some common issues that might be too strict for a basic project
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "E266",  # Too many leading '#' for block comment
+    "B905",  # `zip()` without an explicit `strict=` parameter
+    "PLR2004",  # Magic numbers
+]
+# Allow automatically fixing issues
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLR6301", "PLC0415", "PLR0913", "PLR0917"]

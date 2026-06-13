@@ -1,0 +1,22 @@
+{
+  // ============================================
+  // PYTHON DEVELOPMENT
+  // ============================================
+  "recommendations": [
+    "ms-python.python", // Python
+    "ms-python.vscode-pylance", // Pylance
+    "ms-python.debugpy", // Python Debugger
+    "charliermarsh.ruff", // Ruff
+
+    // ============================================
+    // CODE QUALITY
+    // ============================================
+    "usernamehw.errorlens", // Error Lens
+    "aaron-bond.better-comments", // Better Comments
+
+    // ============================================
+    // DOCUMENTATION
+    // ============================================
+    "davidanson.vscode-markdownlint" // markdownlint
+  ]
+}

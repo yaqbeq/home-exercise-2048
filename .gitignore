@@ -1,0 +1,110 @@
+# ------------------------
+# Python
+# ------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.log
+
+# ------------------------
+# Logging
+# ------------------------
+logs/
+*.log
+
+# ------------------------
+# Virtual Environments
+# ------------------------
+.venv/
+venv/
+env/
+ENV/
+pip-wheel-metadata/
+.pytest_cache/
+
+# ------------------------
+# Jupyter
+# ------------------------
+.ipynb_checkpoints/
+.notebooks_cache/
+*.nbconvert.ipynb
+
+# ------------------------
+# Data
+# ------------------------
+data/raw/
+data/curated/
+data/duckdb/
+*.parquet
+*.feather
+*.h5
+*.db
+*.sqlite
+*.sql.backup
+*$*.xlsx
+*.pkl
+notebooks/data/
+
+# ------------------------
+# Database
+# ------------------------
+db/*.sql.backup
+db/backups/
+
+# ------------------------
+# Config & Secrets
+# ------------------------
+.env
+.env.*
+!/.env.example
+config/*.yaml
+config/*.yml
+config/*.json
+
+# ------------------------
+# IDE / Editors
+# ------------------------
+# .vscode/
+.idea/
+*.swp
+*.swo
+
+# ------------------------
+# Docker
+# ------------------------
+*.pid
+*.tar
+*.log
+.docker/
+docker-compose.override.yml
+
+# ------------------------
+# OS files
+# ------------------------
+.DS_Store
+Thumbs.db
+
+# ------------------------
+# Testing
+# ------------------------
+tests/__pycache__/
+.coverage
+htmlcov/
+coverage.xml
+
+# ------------------------
+# Real data files
+# ------------------------
+data/
+
+# ------------------------
+# Other
+# ------------------------
+.ruff_cache/

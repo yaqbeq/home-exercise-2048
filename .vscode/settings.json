@@ -1,0 +1,100 @@
+{
+  /* PYTHON PROJECT SETTINGS */
+
+  /* Python Environment - Auto-detected cross-platform */
+  "python.terminal.activateEnvironment": true,
+  "python.terminal.executeInFileDir": false,
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/src"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/backend"
+  ],
+
+  /* Terminal */
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "terminal.integrated.env.linux": {
+    "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
+  },
+  "terminal.integrated.env.osx": {
+    "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
+  },
+  "terminal.integrated.env.windows": {
+    "PYTHONPATH": "${workspaceFolder};${env:PYTHONPATH}"
+  },
+
+  /* Python Formatting and Linting with Ruff */
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "editor.tabSize": 4
+  },
+
+  /* YAML formatting */
+  "yaml.format.singleQuote": true,
+
+  /* General Editor */
+  "editor.tabSize": 4,
+  "editor.rulers": [100],
+  "editor.wordWrap": "off",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.eol": "\n",
+
+  /* Python Type Checking */
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  "python.analysis.inlayHints.variableTypes": false,
+
+  /* Testing */
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+
+  /* File Exclusions - Improve performance */
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/.pytest_cache/**": true,
+    "**/.ruff_cache/**": true,
+    "**/*.pyc": true,
+    "**/uv.lock": true
+  },
+  "search.exclude": {
+    "**/.venv": true,
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true,
+    "**/uv.lock": true
+  },
+
+  /* Git */
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "cursorpyright.analysis.autoImportCompletions": true,
+  "cursorpyright.analysis.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/src"
+  ],
+  "cursorpyright.analysis.inlayHints.functionReturnTypes": true,
+  "cursorpyright.analysis.inlayHints.variableTypes": true,
+  "cursorpyright.analysis.typeCheckingMode": "basic",
+
+  /* Markdown */
+  "[markdown]": {
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
+    "editor.formatOnSave": false
+  },
+
+  /* Github Copilot */
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "github.copilot.chat.tools.memory.enabled": true
+}

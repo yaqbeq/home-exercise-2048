@@ -1,0 +1,35 @@
+{
+  "default": true,
+
+  "MD013": {
+    "line_length": 100,
+    "heading_line_length": 100,
+    "code_block_line_length": 100,
+    "code_blocks": false,
+    "tables": false
+  },
+
+  "MD024": {
+    "siblings_only": true
+  },
+
+  "MD036": false,
+
+  "MD046": {
+    "style": "fenced"
+  },
+
+  "MD048": {
+    "style": "backtick"
+  },
+
+  "MD049": {
+    "style": "asterisk"
+  },
+
+  "MD050": {
+    "style": "asterisk"
+  },
+
+  "MD060": false
+}
