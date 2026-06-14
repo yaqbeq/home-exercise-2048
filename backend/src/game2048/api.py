@@ -9,14 +9,16 @@ Endpoints (mounted under ``/api`` by :mod:`game2048.main`):
 
 - ``POST /api/new``  -> a fresh starting board.
 - ``POST /api/move`` -> apply a move to a board and report the outcome.
+- ``POST /api/ai``   -> the AI's suggested next move for a board.
 """
 
-from typing import Literal
+from typing import Literal, cast
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from game2048 import engine
+from game2048.ai import suggest_move
 from game2048.utils import _MOVES
 
 router = APIRouter(prefix='/api')
@@ -56,6 +58,18 @@ class MoveResponse(BaseModel):
     game_over: bool
 
 
+class SuggestionRequest(BaseModel):
+    """A request for an AI move suggestion, containing the current board state."""
+
+    board: Board
+
+
+class SuggestionResponse(BaseModel):
+    """The AI's suggested move direction for a given board state."""
+
+    direction: Direction | None
+
+
 @router.post('/new', response_model=NewGameResponse)
 def new_game() -> NewGameResponse:
     """Starts a new game and returns its initial board."""
@@ -81,3 +95,15 @@ def move(request: MoveRequest) -> MoveResponse:
         win=engine.has_won(new_board),
         game_over=not engine.has_available_moves(new_board),
     )
+
+
+@router.post('/ai', response_model=SuggestionResponse)
+def suggest(request: SuggestionRequest) -> SuggestionResponse:
+    """Returns the AI's suggested move direction for the given board state."""
+    if not engine.has_available_moves(request.board):
+        return SuggestionResponse(direction=None)
+    suggested_direction = suggest_move(request.board)
+    if suggested_direction not in _MOVES:
+        # This should never happen, but just in case the AI returns an invalid move.
+        return SuggestionResponse(direction=None)
+    return SuggestionResponse(direction=cast(Direction, suggested_direction))

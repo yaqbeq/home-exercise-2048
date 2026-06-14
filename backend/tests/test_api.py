@@ -5,7 +5,8 @@ These cover the endpoint contract the frontend relies on:
 - ``/api/move`` merges tiles, spawns a tile on change, and reports outcomes,
 - an illegal move leaves the board unchanged and spawns nothing,
 - an invalid direction is rejected by request validation,
-- win and game-over conditions are reported correctly.
+- win and game-over conditions are reported correctly,
+- ``/api/ai`` suggests a legal direction, or ``null`` when the game is over.
 """
 
 from fastapi.testclient import TestClient
@@ -114,6 +115,32 @@ def test_game_over_is_reported():
     data = client.post('/api/move', json={'board': board, 'direction': 'left'}).json()
     assert data['changed'] is False
     assert data['game_over'] is True
+
+
+# --------------------------------------------------------------------------- #
+# /api/ai
+# --------------------------------------------------------------------------- #
+def test_ai_suggests_a_valid_direction():
+    board = [
+        [2, 4, 8, 16],
+        [None, 4, 8, 32],
+        [2, None, 16, 64],
+        [4, 8, 32, 128],
+    ]
+    data = client.post('/api/ai', json={'board': board}).json()
+    assert data['direction'] in {'left', 'right', 'up', 'down'}
+
+
+def test_ai_returns_null_when_game_over():
+    # A full board with no adjacent equal tiles: no move is possible.
+    board = [
+        [2, 4, 2, 4],
+        [4, 2, 4, 2],
+        [2, 4, 2, 4],
+        [4, 2, 4, 2],
+    ]
+    data = client.post('/api/ai', json={'board': board}).json()
+    assert data['direction'] is None
 
 
 # --------------------------------------------------------------------------- #

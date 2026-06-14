@@ -13,7 +13,7 @@ client state and calls the API for each move.
 
 ## Exercise requirements
 
-These are the original home-exercise requirements the project satisfies. Where
+These are the original exercise requirements the project satisfies. Where
 they conflict with the classic 2048 game, **these requirements win**.
 
 1. **Initial board.** Generate a starting board with a *random number* of `2`s
