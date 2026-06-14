@@ -67,7 +67,7 @@ class SuggestionRequest(BaseModel):
 class SuggestionResponse(BaseModel):
     """The AI's suggested move direction for a given board state."""
 
-    direction: Direction | None
+    direction: Direction
 
 
 @router.post('/new', response_model=NewGameResponse)
@@ -100,10 +100,5 @@ def move(request: MoveRequest) -> MoveResponse:
 @router.post('/ai', response_model=SuggestionResponse)
 def suggest(request: SuggestionRequest) -> SuggestionResponse:
     """Returns the AI's suggested move direction for the given board state."""
-    if not engine.has_available_moves(request.board):
-        return SuggestionResponse(direction=None)
     suggested_direction = suggest_move(request.board)
-    if suggested_direction not in _MOVES:
-        # This should never happen, but just in case the AI returns an invalid move.
-        return SuggestionResponse(direction=None)
     return SuggestionResponse(direction=cast(Direction, suggested_direction))

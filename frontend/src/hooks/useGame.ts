@@ -1,20 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { type Board, type Direction, move, newGame } from '../api'
+import {
+  type Board,
+  type Direction,
+  type SuggestionResult,
+  move,
+  newGame,
+  suggest,
+} from '../api'
 
 /** High-level game status used to drive the UI. */
 export type GameStatus = 'idle' | 'playing' | 'won' | 'lost'
-
-/**
- * A placeholder AI move suggestion. `score` is a 0–1 probability/quality that
- * the (not-yet-implemented) AI assigns to the suggested direction.
- */
-export interface Suggestion {
-  direction: Direction
-  score: number
-}
-
-/** Directions the placeholder AI can pick from. */
-const DIRECTIONS: Direction[] = ['left', 'right', 'up', 'down']
 
 /** Maps keyboard arrow keys (and WASD) to move directions. */
 const KEY_TO_DIRECTION: Record<string, Direction> = {
@@ -33,7 +28,9 @@ export interface UseGame {
   score: number
   status: GameStatus
   /** The current AI suggestion, or `null` when none is shown. */
-  suggestion: Suggestion | null
+  suggestion: SuggestionResult | null
+  /* Thinking state for AI response */
+  isThinking: boolean
   /** Starts (or restarts) a game with a fresh board. */
   start: () => void
   /** Applies a move in the given direction. */
@@ -55,13 +52,14 @@ export const useGame = (): UseGame => {
   const [board, setBoard] = useState<Board>([])
   const [score, setScore] = useState(0)
   const [status, setStatus] = useState<GameStatus>('idle')
-  const [suggestion, setSuggestion] = useState<Suggestion | null>(null)
+  const [suggestion, setSuggestion] = useState<SuggestionResult | null>(null)
+  const [isThinking, setIsThinking] = useState<boolean>(false)
 
   // useCallback memoizes the function so it keeps a stable identity across renders.
   const start = useCallback(() => {
     newGame()
-      .then((fresh) => {
-        setBoard(fresh)
+      .then((newBoard) => {
+        setBoard(newBoard)
         setScore(0)
         setStatus('playing')
         setSuggestion(null)
@@ -95,15 +93,23 @@ export const useGame = (): UseGame => {
     [board, status],
   )
 
-  // Placeholder AI: picks a random direction and a random confidence score.
-  // Real evaluation (offline expectimax) is not implemented yet.
+  // AI: expectimax alhorithm via API, returns direction
   const askAI = useCallback(() => {
     if (status !== 'playing') {
       return
     }
-    const direction = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)]
-    setSuggestion({ direction, score: Math.random() })
-  }, [status])
+    setIsThinking(true)
+    suggest(board)
+      .then((result) => {
+        setSuggestion(result)
+      })
+      .catch(() => {
+        /* keep current state */
+      })
+      .finally(() => {
+        setIsThinking(false)
+      })
+  }, [board, status])
 
   const dismissSuggestion = useCallback(() => setSuggestion(null), [])
 
@@ -130,6 +136,7 @@ export const useGame = (): UseGame => {
     score,
     status,
     suggestion,
+    isThinking,
     start,
     doMove,
     askAI,

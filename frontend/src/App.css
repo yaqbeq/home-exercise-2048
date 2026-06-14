@@ -85,6 +85,32 @@
   }
 }
 
+/* Animated ellipsis for the "Thinking" overlay.
+ * The ::after pseudo-element cycles through "", ".", "..", "..."
+ * using content steps — no JavaScript needed. */
+.thinking-dots::after {
+  content: '';
+  animation: dots 2.4s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0% {
+    content: '';
+  }
+  25% {
+    content: '.';
+  }
+  50% {
+    content: '..';
+  }
+  75% {
+    content: '...';
+  }
+  100% {
+    content: '';
+  }
+}
+
 .controls {
   display: flex;
   justify-content: center;

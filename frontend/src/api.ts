@@ -30,6 +30,11 @@ export interface MoveResult {
   game_over: boolean
 }
 
+/* Response from `POST /api/ai`. */
+export interface SuggestionResult {
+  direction: Direction
+}
+
 // Generic POST helper: serializes the body to JSON and parses the JSON reply.
 // `async` functions return a Promise (JS's await/async, like Python coroutines).
 const postJson = async <T>(url: string, body?: unknown): Promise<T> => {
@@ -53,3 +58,7 @@ export const newGame = async (): Promise<Board> => {
 /** Applies a move to the given board and returns the outcome. */
 export const move = (board: Board, direction: Direction): Promise<MoveResult> =>
   postJson<MoveResult>('/api/move', { board, direction })
+
+/* Asks for AI suggestion for the current board and returns the suggested direction */
+export const suggest = (board: Board): Promise<SuggestionResult> =>
+  postJson<SuggestionResult>('/api/ai', { board })

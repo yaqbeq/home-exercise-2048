@@ -15,8 +15,16 @@ const DIRECTION_LABEL: Record<string, string> = {
 // Top-level component: wires game state to the UI pieces.
 const App = () => {
   // Pull live game state + actions from the custom hook (see hooks/useGame.ts).
-  const { board, score, status, suggestion, start, askAI, dismissSuggestion } =
-    useGame()
+  const {
+    board,
+    score,
+    status,
+    suggestion,
+    start,
+    askAI,
+    dismissSuggestion,
+    isThinking,
+  } = useGame()
 
   const hasBoard = board.length > 0
   const isPlaying = status === 'playing'
@@ -53,13 +61,19 @@ const App = () => {
           </div>
         )}
 
+        {isThinking && (
+          <div className="overlay overlay-suggestion">
+            <p className="overlay-message thinking-dots">Thinking</p>
+            <Button label="Dismiss" onClick={dismissSuggestion} />
+          </div>
+        )}
+
         {suggestion && (
           <div className="overlay overlay-suggestion">
             <p className="overlay-message">
-              Try {DIRECTION_LABEL[suggestion.direction]}
-            </p>
-            <p className="suggestion-score">
-              Confidence: {Math.round(suggestion.score * 100)}%
+              {suggestion.direction
+                ? `Try ${DIRECTION_LABEL[suggestion.direction]}`
+                : 'No moves available'}
             </p>
             <Button label="Dismiss" onClick={dismissSuggestion} />
           </div>
