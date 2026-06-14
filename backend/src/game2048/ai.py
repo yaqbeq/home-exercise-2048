@@ -8,6 +8,12 @@ from game2048.utils import _MOVES
 
 DEPTH_LIMIT = 3  # how many plies (move + spawn) to look ahead; adjust for performance vs. quality
 
+# Softmax temperature used to turn move scores into a confidence distribution.
+# Lower values sharpen toward the single best move; higher values flatten the
+# distribution. The expectimax scores are large and unitless, so they are
+# rescaled (see ``move_probabilities``) before this temperature is applied.
+TEMPERATURE = 1.0
+
 # Terminal-state values for the search. Large magnitudes so the AI strongly
 # prefers winning lines and avoids losing ones, regardless of accumulated score.
 WIN_REWARD = 1_000_000.0
@@ -160,19 +166,63 @@ def chance_value(board: list[list[int | None]], depth: int) -> float:
     return expected_score
 
 
-def suggest_move(board: list[list[int | None]], depth: int = DEPTH_LIMIT) -> str:
-    """Return the best move ('left'/'right'/'up'/'down') via depth-limited expectimax."""
-    best_score = float('-inf')
-    best_move = ''
+def _move_scores(board: list[list[int | None]], depth: int) -> dict[str, float]:
+    """Return the expectimax value of every legal move, keyed by direction."""
+    scores: dict[str, float] = {}
     for direction, move in _MOVES.items():
         new_board, score_gained = move(board)
         if new_board == board:  # illegal move, skip it
             continue
-        score = score_gained + chance_value(new_board, depth - 1)
-        if score > best_score:
-            best_score = score
-            best_move = direction
-    return best_move
+        scores[direction] = score_gained + chance_value(new_board, depth - 1)
+    return scores
+
+
+def suggest_move(board: list[list[int | None]], depth: int = DEPTH_LIMIT) -> str:
+    """Return the best move ('left'/'right'/'up'/'down') via depth-limited expectimax."""
+    scores = _move_scores(board, depth)
+    if not scores:  # no legal move: the game is over
+        return ''
+    return max(scores, key=scores.__getitem__)
+
+
+def move_probabilities(
+    board: list[list[int | None]],
+    depth: int = DEPTH_LIMIT,
+    temperature: float = TEMPERATURE,
+) -> dict[str, float]:
+    """Return a softmax confidence distribution over the legal moves.
+
+    The expectimax scores are utilities on an arbitrary scale, so they are first
+    shifted by their maximum (which keeps ``exp`` numerically stable and leaves
+    the distribution unchanged) before the softmax is applied. The returned
+    probabilities are non-negative and sum to 1; an empty mapping means the game
+    is over (no legal move).
+    """
+    scores = _move_scores(board, depth)
+    if not scores:
+        return {}
+    highest = max(scores.values())
+    exponentials = {
+        direction: math.exp((score - highest) / temperature) for direction, score in scores.items()
+    }
+    total = sum(exponentials.values())
+    return {direction: value / total for direction, value in exponentials.items()}
+
+
+def suggest_move_with_probability(
+    board: list[list[int | None]],
+    depth: int = DEPTH_LIMIT,
+    temperature: float = TEMPERATURE,
+) -> tuple[str, float]:
+    """Return the best move and its softmax confidence in ``[0, 1]``.
+
+    Returns ``('', 0.0)`` when the game is over (no legal move).
+    """
+    probabilities = move_probabilities(board, depth, temperature)
+    if not probabilities:
+        return '', 0.0
+    best_move = max(probabilities, key=probabilities.__getitem__)
+    return best_move, probabilities[best_move]
 
 
 if __name__ == '__main__':
@@ -191,7 +241,7 @@ if __name__ == '__main__':
         [2, None, 16, 64],
         [4, 8, 32, 128],
     ]
-    best_move = suggest_move(board, depth=DEPTH_LIMIT)
-    print(f'Best move: {best_move.upper()}')
+    best_move, probability = suggest_move_with_probability(board, depth=DEPTH_LIMIT)
+    print(f'Best move: {best_move.upper()} (confidence: {probability:.1%})')
     new_board_for_best_move, _ = _MOVES[best_move](board)
     pretty_print(new_board_for_best_move)
