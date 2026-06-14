@@ -17,6 +17,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from game2048 import engine
+from game2048.utils import _MOVES
 
 router = APIRouter(prefix='/api')
 
@@ -25,12 +26,6 @@ Board = list[list[int | None]]
 
 # The four legal move directions, mapped to their engine implementations.
 Direction = Literal['left', 'right', 'up', 'down']
-_MOVES = {
-    'left': engine.move_left,
-    'right': engine.move_right,
-    'up': engine.move_up,
-    'down': engine.move_down,
-}
 
 
 class NewGameResponse(BaseModel):
