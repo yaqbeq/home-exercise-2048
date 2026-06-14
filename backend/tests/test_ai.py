@@ -1,9 +1,8 @@
-"""Tests for the AI move suggestion (expectimax + softmax confidence).
+"""Tests for the AI move suggestion (depth-limited expectimax).
 
 These tests cover:
 - the heuristic feature helpers (max tile, corner, merges, smoothness, monotonicity),
-- the depth-limited expectimax search (legal-move avoidance, obvious merges),
-- the softmax move-probability distribution and the best-move-with-confidence wrapper.
+- the depth-limited expectimax search (legal-move avoidance, obvious merges).
 """
 
 import pytest
@@ -14,9 +13,7 @@ from game2048.ai import (
     WIN_REWARD,
     heuristic_score,
     max_value,
-    move_probabilities,
     suggest_move,
-    suggest_move_with_probability,
 )
 
 Board = list[list[int | None]]
@@ -241,94 +238,3 @@ def test_suggest_move_game_over_returns_empty():
         [4, 2, 4, 2],
     ]
     assert not suggest_move(board, depth=2)
-
-
-# --------------------------------------------------------------------------- #
-# move_probabilities
-# --------------------------------------------------------------------------- #
-def test_move_probabilities_sum_to_one():
-    board: Board = [
-        [2, 4, 8, 16],
-        [None, 4, 8, 32],
-        [2, None, 16, 64],
-        [4, 8, 32, 128],
-    ]
-    probabilities = move_probabilities(board, depth=2)
-    assert probabilities  # at least one legal move
-    assert sum(probabilities.values()) == pytest.approx(1.0)
-    assert all(0.0 <= p <= 1.0 for p in probabilities.values())
-
-
-def test_move_probabilities_only_legal_moves():
-    board: Board = [
-        [2, 4, None, None],
-        [8, 16, None, None],
-        [32, 64, None, None],
-        [128, 256, None, None],
-    ]
-    probabilities = move_probabilities(board, depth=2)
-    assert 'left' not in probabilities  # flush left, so 'left' is illegal
-
-
-def test_move_probabilities_higher_sharpness_sharpens():
-    board: Board = [
-        [2, 4, 8, 16],
-        [None, 4, 8, 32],
-        [2, None, 16, 64],
-        [4, 8, 32, 128],
-    ]
-    sharp = move_probabilities(board, depth=2, sharpness=20.0)
-    flat = move_probabilities(board, depth=2, sharpness=1.0)
-    # A higher sharpness concentrates more weight on the single best move.
-    assert max(sharp.values()) >= max(flat.values())
-
-
-def test_move_probabilities_uniform_when_scores_tie(monkeypatch):
-    # When every legal move scores the same, confidence is split evenly.
-    monkeypatch.setattr(ai, '_move_scores', lambda board, depth: {'left': 5.0, 'right': 5.0})
-    probabilities = move_probabilities([[None]], depth=1)
-    assert probabilities == pytest.approx({'left': 0.5, 'right': 0.5})
-
-
-def test_move_probabilities_single_legal_move_is_certain(monkeypatch):
-    # A single legal move carries all the confidence.
-    monkeypatch.setattr(ai, '_move_scores', lambda board, depth: {'down': 42.0})
-    probabilities = move_probabilities([[None]], depth=1)
-    assert probabilities == {'down': 1.0}
-
-
-def test_move_probabilities_game_over_is_empty():
-    board: Board = [
-        [2, 4, 2, 4],
-        [4, 2, 4, 2],
-        [2, 4, 2, 4],
-        [4, 2, 4, 2],
-    ]
-    assert move_probabilities(board, depth=2) == {}
-
-
-# --------------------------------------------------------------------------- #
-# suggest_move_with_probability
-# --------------------------------------------------------------------------- #
-def test_suggest_move_with_probability_matches_suggest_move():
-    board: Board = [
-        [2, 4, 8, 16],
-        [None, 4, 8, 32],
-        [2, None, 16, 64],
-        [4, 8, 32, 128],
-    ]
-    move, probability = suggest_move_with_probability(board, depth=2)
-    assert move == suggest_move(board, depth=2)
-    assert 0.0 < probability <= 1.0
-    # The reported confidence is the max of the full distribution.
-    assert probability == pytest.approx(max(move_probabilities(board, depth=2).values()))
-
-
-def test_suggest_move_with_probability_game_over():
-    board: Board = [
-        [2, 4, 2, 4],
-        [4, 2, 4, 2],
-        [2, 4, 2, 4],
-        [4, 2, 4, 2],
-    ]
-    assert suggest_move_with_probability(board, depth=2) == ('', 0.0)

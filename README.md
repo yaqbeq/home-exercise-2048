@@ -27,7 +27,7 @@ they conflict with the classic 2048 game, **these requirements win**.
    cells and no valid moves remain).
 7. **AI suggestion.** During play, let the player ask an AI for the best next
    move to avoid game over and maximise the chance of winning. The AI runs
-   **offline** (no network, **no credentials**) — implemented as a
+   **offline** (no network, no API keys needed) — implemented as a
    depth-limited expectimax search (see
    [AI move suggestion](#ai-move-suggestion)).
 
@@ -101,7 +101,7 @@ You can also try the AI from the command line without starting the server:
 
 ```bash
 cd backend
-uv run python -m game2048.ai   # prints the suggested move + confidence for a sample board
+uv run python -m game2048.ai   # prints the suggested move for a sample board
 ```
 
 ## Features
@@ -116,7 +116,7 @@ uv run python -m game2048.ai   # prints the suggested move + confidence for a sa
 - **React UI** — board rendering, keyboard controls, live score, start/reset,
   and win/lose feedback.
 - **Offline AI adviser** — an expectimax search that suggests the best next move
-  and reports a confidence for it (details below).
+  to play (details below).
 
 ## API
 
@@ -136,8 +136,10 @@ an empty cell. A new tile spawns only when a move changes the board. An invalid
 ## AI move suggestion
 
 The AI lives in [backend/src/game2048/ai.py](backend/src/game2048/ai.py) and runs
-fully **offline** — it only calls the pure engine functions, makes no network
-requests, and uses no credentials.
+fully **offline** — it only calls the pure engine functions and makes no network
+requests. The exercise allows a remote model, but the offline expectimax needs
+no API keys at all; if a hosted model were ever added, its secrets would live in
+a git-ignored `.env` file rather than being committed.
 
 ### Why expectimax
 
@@ -153,9 +155,11 @@ behaves.
 
 A general-purpose large language model is the wrong tool for this problem:
 
-- **It does not fit the requirement.** The AI must run **offline with no
-  credentials**. Hosted models (Claude, ChatGPT, etc.) need a network call and
-  an API key, which the exercise explicitly forbids committing.
+- **It is the simplest thing that fits.** The AI must run **offline**, and the
+  local expectimax does so with no API key, no network call, and no extra
+  dependencies. A hosted model (Claude, ChatGPT, etc.) would mean a network
+  round-trip plus a secret to manage (in a git-ignored `.env`) for no benefit
+  here.
 - **2048 is exact search, not language.** The game has clear rules, a small
   branching factor, and a well-defined value to optimise. A few-millisecond
   expectimax search plays this near-optimally; an LLM only *approximates*
@@ -219,35 +223,36 @@ position healthy:
 All weights are tunable in
 [config.py](backend/src/game2048/config.py).
 
-### Move confidence
-
-Besides the best move, the AI can report a **confidence** for it. The per-move
-expectimax scores are turned into a probability distribution with a softmax. The
-scores are on an arbitrary, board-size-dependent scale, so a fixed temperature
-would be meaningless; instead the temperature is derived from the *spread* of
-this turn's scores:
-
-```text
-temperature = (best_score - worst_score) / CONFIDENCE_SHARPNESS
-```
-
-This keeps the confidence stable regardless of the heuristic weights or the
-board size. `CONFIDENCE_SHARPNESS` is a small dimensionless knob (around 3–5):
-higher values make the AI more confident in the single best move, lower values
-flatten the distribution toward an even split.
-
 ### Public functions
 
 - `suggest_move(board, depth)` → the best direction (`''` if the game is over).
-- `move_probabilities(board, depth, sharpness)` → a confidence distribution over
-  the legal moves (sums to 1; `{}` if the game is over).
-- `suggest_move_with_probability(board, depth, sharpness)` →
-  `(best_move, confidence)`.
 
 > **Note.** The AI module and its tests are complete, but it is **not yet wired
 > into the HTTP API or the UI** — there is no `/api/suggestion` endpoint or
-> "Hint" button yet. For now it is exercised via its public functions and the
+> "Hint" button yet. For now it is exercised via its public function and the
 > `python -m game2048.ai` demo.
+
+### Possible extensions
+
+The AI deliberately stops at "which move is best". A natural extension — built
+earlier and then removed to keep the module lean — is a **move-confidence**
+score: turn the per-move expectimax scores into a probability distribution with
+a softmax, so the UI could show *how sure* the AI is, not just its pick.
+
+The one subtlety is that the scores live on an arbitrary, board-size-dependent
+scale, so a fixed softmax temperature is meaningless. Deriving the temperature
+from the *spread* of each turn's scores fixes that:
+
+```text
+temperature = (best_score - worst_score) / sharpness
+```
+
+This keeps the confidence stable regardless of the heuristic weights or the
+board size, with `sharpness` a small dimensionless knob (around 3–5): higher
+values make the AI look more confident in its single best move, lower values
+flatten the distribution toward an even split. It was left out because the
+exercise only asks for the best move, and the extra surface area was not worth
+the complexity — but it is a clean way to enrich the hint if desired.
 
 ## Configuration
 
@@ -256,8 +261,7 @@ Game and AI parameters live in
 
 - **Game:** board size, initial tile count range, odds of spawning a `4`, and
   the winning value.
-- **AI:** search depth, win/loss rewards, the heuristic weights, and the
-  confidence sharpness.
+- **AI:** search depth, win/loss rewards, and the heuristic weights.
 
 ## Development
 
@@ -294,7 +298,7 @@ npm run format:check  # Prettier — verify only
 
 - ✅ Engine, stateless API, and React UI (board, keyboard moves, score,
   start/reset, win/lose) are implemented and tested.
-- ✅ Offline expectimax AI adviser (`ai.py`) with heuristic evaluation and
-  move-confidence is implemented and tested.
+- ✅ Offline expectimax AI adviser (`ai.py`) with heuristic evaluation that
+  suggests the best move is implemented and tested.
 - ⬜ Exposing the AI over the API (`/api/suggestion`) and a frontend "Hint"
   button are not implemented yet.

@@ -29,9 +29,10 @@ Where they conflict with the classic 2048 game, **these requirements win**.
    cells and no valid moves remain).
 7. **AI suggestion.** During play, let the player ask an AI for the best next
    move to avoid game over and maximize the chance of winning. May be an offline
-   model or a remote server — but **never commit credentials**. Implemented as
+   model or a remote server — if a remote model is ever used, keep its secrets
+   in a git-ignored `.env` file and **never commit credentials**. Implemented as
    an **offline depth-limited expectimax** evaluator in `ai.py` (no network, no
-   credentials).
+   API keys needed).
 
 Stated assumptions (reasonable choices where the spec is silent):
 
@@ -70,14 +71,14 @@ home-exercise-2048/
 │   ├── src/game2048/
 │   │   ├── config.py     # tunable game + AI parameters (board, win value, odds, AI weights)
 │   │   ├── engine.py     # pure domain logic: move functions + helpers
-│   │   ├── ai.py         # offline expectimax AI: search, heuristic, move confidence
+│   │   ├── ai.py         # offline expectimax AI: search + heuristic move suggestion
 │   │   ├── utils.py      # shared `_MOVES` direction -> move-function mapping
 │   │   ├── api.py        # FastAPI router: POST /api/new, POST /api/move
 │   │   └── main.py       # FastAPI app: CORS, router wiring, /health
 │   ├── tests/
 │   │   ├── test_engine.py
 │   │   ├── test_api.py
-│   │   └── test_ai.py    # heuristic helpers, expectimax search, move confidence
+│   │   └── test_ai.py    # heuristic helpers, expectimax search, move suggestion
 │   └── pyproject.toml
 ├── frontend/
 │   ├── src/
@@ -109,15 +110,16 @@ home-exercise-2048/
   `place_number`, which uses `random`). Moves return `(new_board, score_gained)`
   and never mutate the input board.
 - **AI is offline-only.** `ai.py` is a self-contained, depth-limited
-  **expectimax** search over the engine functions (no network, **no
-  credentials**). Max nodes maximize over legal moves; chance nodes take the
+  **expectimax** search over the engine functions (no network, no API keys —
+  any secrets for a future remote model would live in a git-ignored `.env`).
+  Max nodes maximize over legal moves; chance nodes take the
   probability-weighted average over every `2`/`4` spawn. Terminal boards return
   large win/loss values; non-terminal leaves are scored by a weighted heuristic
   (empty cells, potential merges, max tile, corner bonus, monotonicity,
-  smoothness). `move_probabilities` adds an optional softmax **move confidence**
-  whose temperature is derived from the spread of move scores
-  (`(best - worst) / CONFIDENCE_SHARPNESS`), so it is independent of weight scale
-  and board size. All AI tunables live in `config.py`. The module is **not yet**
+  smoothness). `suggest_move` returns the single best direction (`''` when the
+  game is over). All AI tunables live in `config.py`. A softmax **move
+  confidence** was prototyped and then removed to keep the module lean; it is
+  documented in the README as a possible extension. The module is **not yet**
   exposed over the API or wired into the UI.
 
 ## API contract
@@ -146,7 +148,7 @@ Notes:
 
 Tunables live in `backend/src/game2048/config.py` (board size, initial tile
 count range, odds of spawning a `4`, win value, and the AI parameters: search
-depth, win/loss rewards, heuristic weights, and confidence sharpness).
+depth, win/loss rewards, and heuristic weights).
 
 ## Conventions
 
@@ -219,7 +221,7 @@ terminals; the Vite proxy forwards `/api/*` to the backend.
 - ✅ Engine, stateless API (`/api/new`, `/api/move`), and React UI (board,
   keyboard moves, score, start/reset, win/lose) are implemented and tested.
 - ✅ **AI move suggestion** (`ai.py`) is implemented: offline expectimax with a
-  weighted heuristic and softmax move confidence, covered by `test_ai.py`.
+  weighted heuristic that returns the best direction, covered by `test_ai.py`.
 - ⬜ Exposing the AI over the API (a `/api/suggestion` endpoint) and adding a
   frontend "Hint" button are not implemented yet.
 
