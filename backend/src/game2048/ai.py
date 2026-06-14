@@ -1,64 +1,173 @@
 """AI move suggestion using Expectimax algorithm."""
 
-from copy import deepcopy
+import math
 
 from game2048.config import CHANCE_OF_FOUR
-from game2048.engine import get_empty_cells, has_available_moves
+from game2048.engine import get_empty_cells, has_available_moves, has_won
 from game2048.utils import _MOVES
 
+DEPTH_LIMIT = 3  # how many plies (move + spawn) to look ahead; adjust for performance vs. quality
 
-def heuristic(board: list[list[int | None]]) -> float:
-    return float(len(get_empty_cells(board)))
+# Terminal-state values for the search. Large magnitudes so the AI strongly
+# prefers winning lines and avoids losing ones, regardless of accumulated score.
+WIN_REWARD = 1_000_000.0
+LOSS_PENALTY = -1_000_000.0
+
+
+# Probabilities of a freshly spawned tile being a 2 or a 4.
+SPAWN_PROBABILITIES = {2: 1 - CHANCE_OF_FOUR, 4: CHANCE_OF_FOUR}
+
+# Heuristic weights for non-terminal states. These are tuned to encourage the AI to
+# keep the board in a "good" state, rather than just maximizing score. The AI
+# will still prioritize winning and avoiding losing, but these weights help it make
+# better decisions in the mid-game.
+EMPTY_WEIGHT = 1000
+MERGE_WEIGHT = 500  # potential merges are good, more opportunities to combine tiles
+MAX_TILE_WEIGHT = 1000  # having a high tile is good, closer to winning
+CORNER_BONUS = 2000  # having the max tile in a corner is very good, easier to build around
+MONOTONICITY_WEIGHT = 100  # boards with monotonic rows/columns are easier to manage
+SMOOTHNESS_WEIGHT = 10  # smoother boards are easier to merge
+
+
+def _max_tile(board: list[list[int | None]]) -> int:
+    """Return the largest tile on the board (0 if the board is empty)."""
+    return max((cell for row in board for cell in row if cell is not None), default=0)
+
+
+def _max_tile_in_corner(board: list[list[int | None]], max_tile: int) -> bool:
+    """Return True if the largest tile sits in one of the four corners."""
+    if max_tile == 0:
+        return False
+    last = len(board) - 1
+    corners = (board[0][0], board[0][last], board[last][0], board[last][last])
+    return max_tile in corners
+
+
+def _count_potential_merges(board: list[list[int | None]]) -> int:
+    """Count adjacent equal tiles (horizontally and vertically) that could merge."""
+    size = len(board)
+    merges = 0
+    for row in range(size):
+        for col in range(size):
+            cell = board[row][col]
+            if cell is None:
+                continue
+            if col + 1 < size and board[row][col + 1] == cell:
+                merges += 1
+            if row + 1 < size and board[row + 1][col] == cell:
+                merges += 1
+    return merges
+
+
+def _smoothness(board: list[list[int | None]]) -> float:
+    """Sum of absolute log2 differences between adjacent tiles (higher means rougher)."""
+    size = len(board)
+    roughness = 0.0
+    for row in range(size):
+        for col in range(size):
+            cell = board[row][col]
+            if cell is None:
+                continue
+            value = math.log2(cell)
+            right = board[row][col + 1] if col + 1 < size else None
+            if right is not None:
+                roughness += abs(value - math.log2(right))
+            down = board[row + 1][col] if row + 1 < size else None
+            if down is not None:
+                roughness += abs(value - math.log2(down))
+    return roughness
+
+
+def _monotonicity(board: list[list[int | None]]) -> float:
+    """Reward rows/columns ordered consistently. Returns <= 0; 0 means fully monotonic."""
+    size = len(board)
+
+    def log_value(cell: int | None) -> float:
+        return math.log2(cell) if cell else 0.0
+
+    increasing_lr = decreasing_lr = 0.0
+    increasing_ud = decreasing_ud = 0.0
+    for row in range(size):
+        for col in range(size - 1):
+            current, nxt = log_value(board[row][col]), log_value(board[row][col + 1])
+            if current > nxt:
+                increasing_lr += nxt - current
+            else:
+                decreasing_lr += current - nxt
+    for col in range(size):
+        for row in range(size - 1):
+            current, nxt = log_value(board[row][col]), log_value(board[row + 1][col])
+            if current > nxt:
+                increasing_ud += nxt - current
+            else:
+                decreasing_ud += current - nxt
+    return max(increasing_lr, decreasing_lr) + max(increasing_ud, decreasing_ud)
+
+
+def heuristic_score(board: list[list[int | None]]) -> float:
+    """Estimate how promising a non-terminal board is, as a weighted sum of features."""
+    empty_cells = len(get_empty_cells(board))
+    merge_score = _count_potential_merges(board)
+    max_tile = _max_tile(board)
+    max_tile_log = math.log2(max_tile) if max_tile else 0.0
+    max_tile_in_corner = _max_tile_in_corner(board, max_tile)
+    monotonicity_score = _monotonicity(board)
+    smoothness_score = _smoothness(board)
+
+    return (
+        EMPTY_WEIGHT * empty_cells
+        + MERGE_WEIGHT * merge_score
+        + MAX_TILE_WEIGHT * max_tile_log
+        + (CORNER_BONUS if max_tile_in_corner else 0)
+        + MONOTONICITY_WEIGHT * monotonicity_score
+        - SMOOTHNESS_WEIGHT * smoothness_score
+    )
 
 
 def max_value(board: list[list[int | None]], depth: int) -> float:
-    """Calculate the maximum score for the max node, which simulates the player's move."""
+    """Value of a max node: the player picks the move with the best expected score."""
+    if has_won(board):
+        return WIN_REWARD
     if not has_available_moves(board):
-        return -1
+        return LOSS_PENALTY
     if depth <= 0:
-        return heuristic(board)
-    best_score = -1
+        return heuristic_score(board)
+    best_score = float('-inf')
     for move in _MOVES.values():
         new_board, score_gained = move(board)
-        if new_board == board:
+        if new_board == board:  # illegal move, skip it
             continue
-        # going depth on chance value as this is the start of the new "turn" for the game
+        # A move starts the game's "turn", so the spawn happens one level deeper.
         score = score_gained + chance_value(new_board, depth - 1)
         best_score = max(best_score, score)
     return best_score
 
 
 def chance_value(board: list[list[int | None]], depth: int) -> float:
-    """Calculate the expected score for the chance node, which simulates the random spawning of new tiles."""
-    new_empty_cells = get_empty_cells(board)
-    if not new_empty_cells:  # no empty cells, no chance to add new tile, game over
-        return -1
-    new_cells = {2: 1 - CHANCE_OF_FOUR, 4: CHANCE_OF_FOUR}
-    score = 0
-    for cell in new_empty_cells:
-        for value, probability in new_cells.items():
-            new_board_with_spawned_number = [
-                row[:] for row in board
-            ]  # deep copy of the board, faster than deepcopy for 2D list
-            new_board_with_spawned_number[cell[0]][cell[1]] = value
-            score += (
-                probability
-                * max_value(new_board_with_spawned_number, depth - 1)
-                / len(new_empty_cells)
-            )
-    return score
+    """Value of a chance node: the probability-weighted average over every tile spawn."""
+    empty_cells = get_empty_cells(board)
+    if not empty_cells:  # nothing can spawn; just evaluate the board
+        return heuristic_score(board)
+    # Each empty cell is equally likely to receive the new tile.
+    cell_probability = 1 / len(empty_cells)
+    expected_score = 0.0
+    for row, col in empty_cells:
+        for value, spawn_probability in SPAWN_PROBABILITIES.items():
+            spawned_board = [r[:] for r in board]  # shallow row copy is enough for ints/None
+            spawned_board[row][col] = value
+            # Depth is passed through unchanged: it only ticks down when a move is made.
+            expected_score += cell_probability * spawn_probability * max_value(spawned_board, depth)
+    return expected_score
 
 
-def suggest_move(board: list[list[int | None]], depth: int = 3) -> str:
-    """Suggest the best move for the current board state using Expectimax algorithm and take first moves."""
-    best_score = -1
-    directions = ['left', 'right', 'up', 'down']
-    best_move: str = ''
-    for direction in directions:
-        new_board, score_gained = _MOVES[direction](board)
-        if new_board == board:
+def suggest_move(board: list[list[int | None]], depth: int = DEPTH_LIMIT) -> str:
+    """Return the best move ('left'/'right'/'up'/'down') via depth-limited expectimax."""
+    best_score = float('-inf')
+    best_move = ''
+    for direction, move in _MOVES.items():
+        new_board, score_gained = move(board)
+        if new_board == board:  # illegal move, skip it
             continue
-        # going depth on chance value as this is the start of the new "turn" for the game
         score = score_gained + chance_value(new_board, depth - 1)
         if score > best_score:
             best_score = score
@@ -72,7 +181,7 @@ if __name__ == '__main__':
         for row in board:
             print('+------+------+------+------+')
             print(
-                '|' + '|'.join(f'{cell if cell not in (0, None) else "":^6}' for cell in row) + '|'
+                '|' + '|'.join(f'{cell if cell not in {0, None} else "":^6}' for cell in row) + '|'
             )
         print('+------+------+------+------+')
 
@@ -82,30 +191,7 @@ if __name__ == '__main__':
         [2, None, 16, 64],
         [4, 8, 32, 128],
     ]
-    best_score = -1
-    directions = ['left', 'right', 'up', 'down']
-    best_move: str = ''
-    new_cells = {2: 1 - CHANCE_OF_FOUR, 4: CHANCE_OF_FOUR}
-    # we only need to save one direction info, but for many depths
-    for direction in directions:
-        score = 0
-        new_board, score_gained = _MOVES[direction](board)
-        if new_board == board:
-            print(f'Move {direction} is illegal.')
-            continue
-
-        # chance part
-        new_empty_cells = get_empty_cells(new_board)
-        # similate new boards with 2 or 4 and calculate heurisitc score
-        for cell in new_empty_cells:
-            for value, probability in new_cells.items():
-                new_board_with_value = deepcopy(new_board)
-                new_board_with_value[cell[0]][cell[1]] = value
-                score += probability * heuristic(new_board_with_value) / len(new_empty_cells)
-        if score > best_score:
-            best_score = score
-            best_move = direction
-            new_board_for_best_move = new_board
-
-    print(f'Best move: {best_move.upper()} with heuristic score: {best_score}')
+    best_move = suggest_move(board, depth=DEPTH_LIMIT)
+    print(f'Best move: {best_move.upper()}')
+    new_board_for_best_move, _ = _MOVES[best_move](board)
     pretty_print(new_board_for_best_move)
