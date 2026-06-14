@@ -1,6 +1,9 @@
 """AI move suggestion using Expectimax algorithm."""
 
+from copy import deepcopy
+
 from game2048.api import _MOVES
+from game2048.config import CHANCE_OF_FOUR
 from game2048.engine import get_empty_cells
 
 
@@ -24,11 +27,30 @@ if __name__ == '__main__':
         [2, None, 16, 64],
         [4, 8, 32, 128],
     ]
-
-    for direction in ['left', 'right', 'up', 'down']:
+    best_score = -1
+    directions = ['left', 'right', 'up', 'down']
+    best_move: str = ''
+    new_cells = {2: 1 - CHANCE_OF_FOUR, 4: CHANCE_OF_FOUR}
+    # we only need to save one direction info, but for many depths
+    for direction in directions:
+        score = 0
         new_board, score_gained = _MOVES[direction](board)
         if new_board == board:
             print(f'Move {direction} is illegal.')
             continue
-        print(f'Move {direction}: score = {heuristic(new_board)}')
-        pretty_print(new_board)
+
+        # chance part
+        new_empty_cells = get_empty_cells(new_board)
+        # similate new boards with 2 or 4 and calculate heurisitc score
+        for cell in new_empty_cells:
+            for value, probability in new_cells.items():
+                new_board_with_value = deepcopy(new_board)
+                new_board_with_value[cell[0]][cell[1]] = value
+                score += probability * heuristic(new_board_with_value) / len(new_empty_cells)
+        if score > best_score:
+            best_score = score
+            best_move = direction
+            new_board_for_best_move = new_board
+
+    print(f'Best move: {best_move.upper()} with heuristic score: {best_score}')
+    pretty_print(new_board_for_best_move)

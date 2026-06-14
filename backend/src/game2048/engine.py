@@ -10,7 +10,8 @@ from game2048.config import (
 
 
 def get_empty_cells(board: list[list[int | None]]) -> list[tuple[int, int]]:
-    """Determines the location of empty cells on the game board."""
+    """Determines the location of empty cells on the game board.
+    Returns a list of (row, column) tuples for each empty cell."""
     empty_cells = []
     for row_idx, row in enumerate(board):
         for col_idx, cell in enumerate(row):
