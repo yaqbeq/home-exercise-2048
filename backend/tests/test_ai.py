@@ -270,16 +270,31 @@ def test_move_probabilities_only_legal_moves():
     assert 'left' not in probabilities  # flush left, so 'left' is illegal
 
 
-def test_move_probabilities_lower_temperature_sharpens():
+def test_move_probabilities_higher_sharpness_sharpens():
     board: Board = [
         [2, 4, 8, 16],
         [None, 4, 8, 32],
         [2, None, 16, 64],
         [4, 8, 32, 128],
     ]
-    cold = move_probabilities(board, depth=2, temperature=0.1)
-    warm = move_probabilities(board, depth=2, temperature=10.0)
-    assert max(cold.values()) >= max(warm.values())
+    sharp = move_probabilities(board, depth=2, sharpness=20.0)
+    flat = move_probabilities(board, depth=2, sharpness=1.0)
+    # A higher sharpness concentrates more weight on the single best move.
+    assert max(sharp.values()) >= max(flat.values())
+
+
+def test_move_probabilities_uniform_when_scores_tie(monkeypatch):
+    # When every legal move scores the same, confidence is split evenly.
+    monkeypatch.setattr(ai, '_move_scores', lambda board, depth: {'left': 5.0, 'right': 5.0})
+    probabilities = move_probabilities([[None]], depth=1)
+    assert probabilities == pytest.approx({'left': 0.5, 'right': 0.5})
+
+
+def test_move_probabilities_single_legal_move_is_certain(monkeypatch):
+    # A single legal move carries all the confidence.
+    monkeypatch.setattr(ai, '_move_scores', lambda board, depth: {'down': 42.0})
+    probabilities = move_probabilities([[None]], depth=1)
+    assert probabilities == {'down': 1.0}
 
 
 def test_move_probabilities_game_over_is_empty():

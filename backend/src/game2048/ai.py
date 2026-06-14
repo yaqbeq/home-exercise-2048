@@ -2,37 +2,25 @@
 
 import math
 
-from game2048.config import CHANCE_OF_FOUR
+from game2048.config import (
+    CHANCE_OF_FOUR,
+    CONFIDENCE_SHARPNESS,
+    CORNER_BONUS,
+    DEPTH_LIMIT,
+    EMPTY_WEIGHT,
+    LOSS_PENALTY,
+    MAX_TILE_WEIGHT,
+    MERGE_WEIGHT,
+    MONOTONICITY_WEIGHT,
+    SMOOTHNESS_WEIGHT,
+    WIN_REWARD,
+)
 from game2048.engine import get_empty_cells, has_available_moves, has_won
 from game2048.utils import _MOVES
 
-DEPTH_LIMIT = 3  # how many plies (move + spawn) to look ahead; adjust for performance vs. quality
-
-# Softmax temperature used to turn move scores into a confidence distribution.
-# Lower values sharpen toward the single best move; higher values flatten the
-# distribution. The expectimax scores are large and unitless, so they are
-# rescaled (see ``move_probabilities``) before this temperature is applied.
-TEMPERATURE = 1.0
-
-# Terminal-state values for the search. Large magnitudes so the AI strongly
-# prefers winning lines and avoids losing ones, regardless of accumulated score.
-WIN_REWARD = 1_000_000.0
-LOSS_PENALTY = -1_000_000.0
-
-
-# Probabilities of a freshly spawned tile being a 2 or a 4.
+# Probabilities that a freshly spawned tile is a 2 or a 4 (mirrors the engine's
+# spawn rule). Tunable search/heuristic parameters live in ``config.py``.
 SPAWN_PROBABILITIES = {2: 1 - CHANCE_OF_FOUR, 4: CHANCE_OF_FOUR}
-
-# Heuristic weights for non-terminal states. These are tuned to encourage the AI to
-# keep the board in a "good" state, rather than just maximizing score. The AI
-# will still prioritize winning and avoiding losing, but these weights help it make
-# better decisions in the mid-game.
-EMPTY_WEIGHT = 1000
-MERGE_WEIGHT = 500  # potential merges are good, more opportunities to combine tiles
-MAX_TILE_WEIGHT = 1000  # having a high tile is good, closer to winning
-CORNER_BONUS = 2000  # having the max tile in a corner is very good, easier to build around
-MONOTONICITY_WEIGHT = 100  # boards with monotonic rows/columns are easier to manage
-SMOOTHNESS_WEIGHT = 10  # smoother boards are easier to merge
 
 
 def _max_tile(board: list[list[int | None]]) -> int:
@@ -188,20 +176,36 @@ def suggest_move(board: list[list[int | None]], depth: int = DEPTH_LIMIT) -> str
 def move_probabilities(
     board: list[list[int | None]],
     depth: int = DEPTH_LIMIT,
-    temperature: float = TEMPERATURE,
+    sharpness: float = CONFIDENCE_SHARPNESS,
 ) -> dict[str, float]:
     """Return a softmax confidence distribution over the legal moves.
 
-    The expectimax scores are utilities on an arbitrary scale, so they are first
-    shifted by their maximum (which keeps ``exp`` numerically stable and leaves
-    the distribution unchanged) before the softmax is applied. The returned
-    probabilities are non-negative and sum to 1; an empty mapping means the game
-    is over (no legal move).
+    The expectimax scores are utilities on an arbitrary scale (the heuristic
+    weights are large), so a fixed softmax temperature would be meaningless. We
+    instead derive the temperature from the *spread* of this turn's scores:
+    ``temperature = (best - worst) / sharpness``. Because the spread is measured
+    in the same units as the scores, the result is independent of the weight
+    magnitudes and of the board size — ``sharpness`` is a dimensionless knob for
+    how peaked the distribution is (higher = more confident in the best move).
+
+    The returned probabilities are non-negative and sum to 1; an empty mapping
+    means the game is over (no legal move).
     """
     scores = _move_scores(board, depth)
-    if not scores:
+    if not scores:  # game over: no legal move to be confident about
         return {}
+
     highest = max(scores.values())
+    spread = highest - min(scores.values())
+    if spread == 0:
+        # One legal move, or all moves equally good: split confidence uniformly.
+        uniform = 1 / len(scores)
+        return {direction: uniform for direction in scores}
+
+    # Gap-relative temperature, then the usual numerically stable softmax
+    # (subtracting ``highest`` keeps exp() from overflowing and does not change
+    # the normalised result).
+    temperature = spread / sharpness
     exponentials = {
         direction: math.exp((score - highest) / temperature) for direction, score in scores.items()
     }
@@ -212,15 +216,17 @@ def move_probabilities(
 def suggest_move_with_probability(
     board: list[list[int | None]],
     depth: int = DEPTH_LIMIT,
-    temperature: float = TEMPERATURE,
+    sharpness: float = CONFIDENCE_SHARPNESS,
 ) -> tuple[str, float]:
     """Return the best move and its softmax confidence in ``[0, 1]``.
 
     Returns ``('', 0.0)`` when the game is over (no legal move).
     """
-    probabilities = move_probabilities(board, depth, temperature)
+    probabilities = move_probabilities(board, depth, sharpness)
     if not probabilities:
         return '', 0.0
+    # The best move is the one with the highest expected score, which is also the
+    # peak of the softmax distribution; report that peak as the confidence.
     best_move = max(probabilities, key=probabilities.__getitem__)
     return best_move, probabilities[best_move]
 

@@ -17,3 +17,34 @@ CHANCE_OF_FOUR = 0.1
 
 # The game is won as soon as any tile reaches this value.
 WIN_VALUE = 2048
+
+
+# --------------------------------------------------------------------------- #
+# AI move suggestion (expectimax)
+# --------------------------------------------------------------------------- #
+
+# How many plies (a player move plus the tile spawn that follows) the search
+# looks ahead. Higher is stronger but exponentially slower.
+DEPTH_LIMIT = 3
+
+# Terminal-state values for the search. Large magnitudes so the AI strongly
+# prefers winning lines and avoids losing ones, regardless of accumulated score.
+WIN_REWARD = 1_000_000.0
+LOSS_PENALTY = -1_000_000.0
+
+# Heuristic weights for non-terminal boards. They balance the features that keep
+# a position playable: open space, ready merges, a big tile pinned to a corner,
+# and tidy (monotonic / smooth) rows and columns.
+EMPTY_WEIGHT = 1000
+MERGE_WEIGHT = 500  # potential merges mean more chances to combine tiles
+MAX_TILE_WEIGHT = 1000  # a higher max tile is closer to winning
+CORNER_BONUS = 2000  # the max tile in a corner is easier to build around
+MONOTONICITY_WEIGHT = 100  # monotonic rows/columns are easier to manage
+SMOOTHNESS_WEIGHT = 10  # similar neighbours are easier to merge
+
+# Sharpness of the move-confidence softmax. The temperature is derived per turn
+# as (best_score - worst_score) / CONFIDENCE_SHARPNESS, so it tracks the actual
+# spread of move scores and stays independent of the weight magnitudes above and
+# of the board size. Higher = more confident in the single best move; lower =
+# flatter, closer to a uniform split. A dimensionless value around 3-5 works well.
+CONFIDENCE_SHARPNESS = 4.0
