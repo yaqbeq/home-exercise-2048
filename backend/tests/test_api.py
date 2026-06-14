@@ -6,7 +6,7 @@ These cover the endpoint contract the frontend relies on:
 - an illegal move leaves the board unchanged and spawns nothing,
 - an invalid direction is rejected by request validation,
 - win and game-over conditions are reported correctly,
-- ``/api/ai`` suggests a legal direction, or ``null`` when the game is over.
+- ``/api/ai`` suggests a legal direction, or returns 409 when the game is over.
 """
 
 from fastapi.testclient import TestClient
@@ -131,7 +131,7 @@ def test_ai_suggests_a_valid_direction():
     assert data['direction'] in {'left', 'right', 'up', 'down'}
 
 
-def test_ai_returns_null_when_game_over():
+def test_ai_returns_409_when_game_over():
     # A full board with no adjacent equal tiles: no move is possible.
     board = [
         [2, 4, 2, 4],
@@ -139,8 +139,8 @@ def test_ai_returns_null_when_game_over():
         [2, 4, 2, 4],
         [4, 2, 4, 2],
     ]
-    data = client.post('/api/ai', json={'board': board}).json()
-    assert data['direction'] is None
+    response = client.post('/api/ai', json={'board': board})
+    assert response.status_code == 409
 
 
 # --------------------------------------------------------------------------- #

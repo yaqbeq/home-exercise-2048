@@ -14,7 +14,7 @@ Endpoints (mounted under ``/api`` by :mod:`game2048.main`):
 
 from typing import Literal, cast
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from game2048 import engine
@@ -99,6 +99,15 @@ def move(request: MoveRequest) -> MoveResponse:
 
 @router.post('/ai', response_model=SuggestionResponse)
 def suggest(request: SuggestionRequest) -> SuggestionResponse:
-    """Returns the AI's suggested move direction for the given board state."""
+    """Returns the AI's suggested move direction for the given board state.
+
+    Responds with ``409 Conflict`` when the board has no legal moves (the game
+    is over), since there is no move to suggest.
+    """
+    if not engine.has_available_moves(request.board):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='No moves available: the game is over.',
+        )
     suggested_direction = suggest_move(request.board)
     return SuggestionResponse(direction=cast(Direction, suggested_direction))

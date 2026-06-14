@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import {
   type Board,
   type Direction,
@@ -55,6 +55,8 @@ export const useGame = (): UseGame => {
   const [suggestion, setSuggestion] = useState<SuggestionResult | null>(null)
   const [isThinking, setIsThinking] = useState<boolean>(false)
 
+  const suggestionResultCache = useRef(new Map<string, SuggestionResult>())
+
   // useCallback memoizes the function so it keeps a stable identity across renders.
   const start = useCallback(() => {
     newGame()
@@ -98,9 +100,16 @@ export const useGame = (): UseGame => {
     if (status !== 'playing') {
       return
     }
+    const key = JSON.stringify(board)
+    if (suggestionResultCache.current.has(key)) {
+      setSuggestion(suggestionResultCache.current.get(key)!)
+      return
+    }
+    setSuggestion(null)
     setIsThinking(true)
     suggest(board)
       .then((result) => {
+        suggestionResultCache.current.set(key, result)
         setSuggestion(result)
       })
       .catch(() => {

@@ -71,9 +71,7 @@ const App = () => {
         {suggestion && (
           <div className="overlay overlay-suggestion">
             <p className="overlay-message">
-              {suggestion.direction
-                ? `Try ${DIRECTION_LABEL[suggestion.direction]}`
-                : 'No moves available'}
+              {`Try ${DIRECTION_LABEL[suggestion.direction]}`}
             </p>
             <Button label="Dismiss" onClick={dismissSuggestion} />
           </div>

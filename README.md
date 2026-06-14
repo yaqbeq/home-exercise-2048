@@ -127,11 +127,14 @@ keeps no game state between requests.
 - `POST /api/move` with
   `{ "board": Board, "direction": "left" | "right" | "up" | "down" }`
   → `{ "board", "score_gained", "changed", "win", "game_over" }`
+- `POST /api/ai` with `{ "board": Board }` → `{ "direction": Direction }`
 - `GET /health` → `{ "status": "ok" }`
 
 A `Board` is a 4×4 array of cells, where a cell is an integer tile or `null` for
 an empty cell. A new tile spawns only when a move changes the board. An invalid
-`direction` is rejected with HTTP **422** (Pydantic validation).
+`direction` is rejected with HTTP **422** (Pydantic validation). A request to
+`POST /api/ai` for a board with no legal moves is rejected with HTTP **409**
+(the game is over, so there is no move to suggest).
 
 ## AI move suggestion
 
@@ -227,10 +230,10 @@ All weights are tunable in
 
 - `suggest_move(board, depth)` → the best direction (`''` if the game is over).
 
-> **Note.** The AI module and its tests are complete, but it is **not yet wired
-> into the HTTP API or the UI** — there is no `/api/suggestion` endpoint or
-> "Hint" button yet. For now it is exercised via its public function and the
-> `python -m game2048.ai` demo.
+The AI is exposed over the API as `POST /api/ai` and wired into the UI via the
+**Ask AI** button, which shows a "Thinking" overlay while the search runs and
+then the suggested move. Repeated requests for the same board are served from a
+small client-side cache, so they return instantly without another network call.
 
 ### Possible extensions
 
@@ -300,5 +303,5 @@ npm run format:check  # Prettier — verify only
   start/reset, win/lose) are implemented and tested.
 - ✅ Offline expectimax AI adviser (`ai.py`) with heuristic evaluation that
   suggests the best move is implemented and tested.
-- ⬜ Exposing the AI over the API (`/api/suggestion`) and a frontend "Hint"
-  button are not implemented yet.
+- ✅ The AI is exposed over the API (`POST /api/ai`) and wired into the UI via
+  the **Ask AI** button (with a "Thinking" overlay and a client-side cache).

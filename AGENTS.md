@@ -73,7 +73,7 @@ home-exercise-2048/
 │   │   ├── engine.py     # pure domain logic: move functions + helpers
 │   │   ├── ai.py         # offline expectimax AI: search + heuristic move suggestion
 │   │   ├── utils.py      # shared `_MOVES` direction -> move-function mapping
-│   │   ├── api.py        # FastAPI router: POST /api/new, POST /api/move
+│   │   ├── api.py        # FastAPI router: POST /api/new, POST /api/move, POST /api/ai
 │   │   └── main.py       # FastAPI app: CORS, router wiring, /health
 │   ├── tests/
 │   │   ├── test_engine.py
@@ -119,8 +119,8 @@ home-exercise-2048/
   smoothness). `suggest_move` returns the single best direction (`''` when the
   game is over). All AI tunables live in `config.py`. A softmax **move
   confidence** was prototyped and then removed to keep the module lean; it is
-  documented in the README as a possible extension. The module is **not yet**
-  exposed over the API or wired into the UI.
+  documented in the README as a possible extension. The AI is exposed over the
+  API as `POST /api/ai` and wired into the UI via the **Ask AI** button.
 
 ## API contract
 
@@ -129,6 +129,7 @@ Routes are mounted under `/api` (see `main.py`).
 - `POST /api/new` → `{ "board": Board }`
 - `POST /api/move` with `{ "board": Board, "direction": "left"|"right"|"up"|"down" }`
   → `{ "board", "score_gained", "changed", "win", "game_over" }`
+- `POST /api/ai` with `{ "board": Board }` → `{ "direction": Direction }`
 - `GET /health` → `{ "status": "ok" }`
 
 Notes:
@@ -136,6 +137,8 @@ Notes:
 - `Board` is a 4×4 array of cells; a cell is an `int` tile or `null` for empty.
 - An **invalid direction** is rejected with HTTP **422** (Pydantic `Literal`
   validation), not 400.
+- `POST /api/ai` on a board with no legal moves is rejected with HTTP **409**
+  (the game is over, so there is no move to suggest).
 - A new tile spawns **only** when a move changes the board (`changed: true`).
 
 ## Game rules (assumptions)
@@ -218,12 +221,14 @@ terminals; the Vite proxy forwards `/api/*` to the backend.
 
 ## Current status / next steps
 
-- ✅ Engine, stateless API (`/api/new`, `/api/move`), and React UI (board,
-  keyboard moves, score, start/reset, win/lose) are implemented and tested.
+- ✅ Engine, stateless API (`/api/new`, `/api/move`, `/api/ai`), and React UI
+  (board, keyboard moves, score, start/reset, win/lose) are implemented and
+  tested.
 - ✅ **AI move suggestion** (`ai.py`) is implemented: offline expectimax with a
   weighted heuristic that returns the best direction, covered by `test_ai.py`.
-- ⬜ Exposing the AI over the API (a `/api/suggestion` endpoint) and adding a
-  frontend "Hint" button are not implemented yet.
+- ✅ The AI is exposed over the API (`POST /api/ai`) and wired into the UI via
+  the **Ask AI** button (a "Thinking" overlay while it searches, plus a
+  client-side cache keyed on the board for instant repeat answers).
 
 ## Guardrails
 
