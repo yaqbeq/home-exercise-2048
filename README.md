@@ -124,8 +124,8 @@ winning value) live in
 - A new tile (`2` or `4`) is added only after a valid move.
 - The game is won when any tile reaches `2048`.
 - The game is lost when there are no empty cells and no valid moves.
-- The AI suggestion (planned) will run offline via a heuristic evaluator; no
-  external credentials or remote model are required.
+- The AI suggestion (planned) will run offline via a heuristic evaluator by default
+- Additional offline AI model will be added as optional choice
 
 ## Status
 

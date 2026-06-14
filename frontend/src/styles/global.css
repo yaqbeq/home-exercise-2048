@@ -33,6 +33,7 @@
   /* Overlay tints. */
   --color-overlay-won: rgba(237, 194, 46, 0.5);
   --color-overlay-lost: rgba(238, 228, 218, 0.73);
+  --color-overlay-suggestion: rgba(238, 228, 218, 0.73);
   --color-focus-ring: #bbada0;
 
   /* Spacing / shape / motion tokens. */

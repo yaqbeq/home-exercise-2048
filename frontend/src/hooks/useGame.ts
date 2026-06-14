@@ -4,6 +4,18 @@ import { type Board, type Direction, move, newGame } from '../api'
 /** High-level game status used to drive the UI. */
 export type GameStatus = 'idle' | 'playing' | 'won' | 'lost'
 
+/**
+ * A placeholder AI move suggestion. `score` is a 0–1 probability/quality that
+ * the (not-yet-implemented) AI assigns to the suggested direction.
+ */
+export interface Suggestion {
+  direction: Direction
+  score: number
+}
+
+/** Directions the placeholder AI can pick from. */
+const DIRECTIONS: Direction[] = ['left', 'right', 'up', 'down']
+
 /** Maps keyboard arrow keys (and WASD) to move directions. */
 const KEY_TO_DIRECTION: Record<string, Direction> = {
   ArrowLeft: 'left',
@@ -20,10 +32,16 @@ export interface UseGame {
   board: Board
   score: number
   status: GameStatus
+  /** The current AI suggestion, or `null` when none is shown. */
+  suggestion: Suggestion | null
   /** Starts (or restarts) a game with a fresh board. */
   start: () => void
   /** Applies a move in the given direction. */
   doMove: (direction: Direction) => void
+  /** Requests an AI move suggestion (placeholder — no real AI yet). */
+  askAI: () => void
+  /** Dismisses the current AI suggestion. */
+  dismissSuggestion: () => void
 }
 
 /**
@@ -37,6 +55,7 @@ export const useGame = (): UseGame => {
   const [board, setBoard] = useState<Board>([])
   const [score, setScore] = useState(0)
   const [status, setStatus] = useState<GameStatus>('idle')
+  const [suggestion, setSuggestion] = useState<Suggestion | null>(null)
 
   // useCallback memoizes the function so it keeps a stable identity across renders.
   const start = useCallback(() => {
@@ -45,6 +64,7 @@ export const useGame = (): UseGame => {
         setBoard(fresh)
         setScore(0)
         setStatus('playing')
+        setSuggestion(null)
       })
       .catch(() => setStatus('idle'))
   }, [])
@@ -54,6 +74,7 @@ export const useGame = (): UseGame => {
       if (status !== 'playing') {
         return
       }
+      setSuggestion(null)
       move(board, direction)
         .then((result) => {
           if (!result.changed) {
@@ -74,6 +95,18 @@ export const useGame = (): UseGame => {
     [board, status],
   )
 
+  // Placeholder AI: picks a random direction and a random confidence score.
+  // Real evaluation (offline expectimax) is not implemented yet.
+  const askAI = useCallback(() => {
+    if (status !== 'playing') {
+      return
+    }
+    const direction = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)]
+    setSuggestion({ direction, score: Math.random() })
+  }, [status])
+
+  const dismissSuggestion = useCallback(() => setSuggestion(null), [])
+
   // useEffect runs side effects after render; the cleanup it returns runs before
   // the next effect / on unmount. Re-runs whenever a value in [deps] changes.
   // Bind keyboard controls only while a game is in progress.
@@ -92,5 +125,14 @@ export const useGame = (): UseGame => {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [status, doMove])
 
-  return { board, score, status, start, doMove }
+  return {
+    board,
+    score,
+    status,
+    suggestion,
+    start,
+    doMove,
+    askAI,
+    dismissSuggestion,
+  }
 }

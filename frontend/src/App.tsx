@@ -1,15 +1,26 @@
 import './App.css'
 import { Board } from './components/Board/Board'
-import { Controls } from './components/Controls/Controls'
+import { Button } from './components/Button/Button'
 import { Scoreboard } from './components/Scoreboard/Scoreboard'
 import { useGame } from './hooks/useGame'
+
+/** Human-readable labels for each move direction. */
+const DIRECTION_LABEL: Record<string, string> = {
+  left: 'Left',
+  right: 'Right',
+  up: 'Up',
+  down: 'Down',
+}
 
 // Top-level component: wires game state to the UI pieces.
 const App = () => {
   // Pull live game state + actions from the custom hook (see hooks/useGame.ts).
-  const { board, score, status, start } = useGame()
+  const { board, score, status, suggestion, start, askAI, dismissSuggestion } =
+    useGame()
 
   const hasBoard = board.length > 0
+  const isPlaying = status === 'playing'
+  const startLabel = status === 'idle' ? 'Start Game' : 'Reset'
 
   // JSX below is the rendered UI; `{...}` embeds JS expressions into the markup.
   return (
@@ -38,15 +49,31 @@ const App = () => {
             <p className="overlay-message">
               {status === 'won' ? 'You win! 🎉' : 'Game over'}
             </p>
-            <button type="button" className="control-button" onClick={start}>
-              Play again
-            </button>
+            <Button label="Play again" onClick={start} />
+          </div>
+        )}
+
+        {suggestion && (
+          <div className="overlay overlay-suggestion">
+            <p className="overlay-message">
+              Try {DIRECTION_LABEL[suggestion.direction]}
+            </p>
+            <p className="suggestion-score">
+              Confidence: {Math.round(suggestion.score * 100)}%
+            </p>
+            <Button label="Dismiss" onClick={dismissSuggestion} />
           </div>
         )}
       </div>
 
       <div className="controls">
-        <Controls status={status} onStart={start} />
+        <Button label={startLabel} onClick={start} />
+        <Button
+          label="Ask AI"
+          onClick={askAI}
+          variant="secondary"
+          disabled={!isPlaying}
+        />
       </div>
     </main>
   )

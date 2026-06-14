@@ -59,9 +59,20 @@
   background: var(--color-overlay-lost);
 }
 
+.overlay-suggestion {
+  background: var(--color-overlay-suggestion);
+}
+
 .overlay-message {
   font-size: 40px;
   font-weight: 800;
+  color: var(--color-text);
+}
+
+.suggestion-score {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--color-text);
 }
 
@@ -77,4 +88,5 @@
 .controls {
   display: flex;
   justify-content: center;
+  gap: var(--space-md);
 }
