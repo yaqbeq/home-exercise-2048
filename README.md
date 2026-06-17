@@ -123,13 +123,6 @@ dev server proxies `/api/*` to the backend, so no extra configuration is needed.
 
 Interactive API docs are available at <http://localhost:8000/docs>.
 
-You can also try the AI from the command line without starting the server:
-
-```bash
-cd backend
-uv run python -m game2048.ai   # prints the suggested move for a sample board
-```
-
 ## Features
 
 - **4×4 game engine** with left / right / up / down moves and adjacent-tile
