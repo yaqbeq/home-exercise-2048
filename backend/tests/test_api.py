@@ -6,12 +6,15 @@ These cover the endpoint contract the frontend relies on:
 - an illegal move leaves the board unchanged and spawns nothing,
 - an invalid direction is rejected by request validation,
 - win and game-over conditions are reported correctly,
-- ``/api/ai`` suggests a legal direction, or returns 409 when the game is over.
+- ``/api/ai`` suggests a legal direction, or returns 409 when the game is over,
+- ``/api/llm`` suggests a legal direction, returns 409 when the game is over,
+  and 502 when the remote model fails.
 """
 
 from fastapi.testclient import TestClient
 
-from game2048 import config
+from game2048 import api, config
+from game2048.llm import LLMError
 from game2048.main import app
 
 client = TestClient(app)
@@ -141,6 +144,57 @@ def test_ai_returns_409_when_game_over():
     ]
     response = client.post('/api/ai', json={'board': board})
     assert response.status_code == 409
+
+
+# --------------------------------------------------------------------------- #
+# /api/llm
+# --------------------------------------------------------------------------- #
+def test_llm_suggests_a_valid_direction(monkeypatch):
+    # Replace the remote call with a stub so the endpoint never hits the network.
+    def fake_suggest(board, valid_moves):
+        assert valid_moves  # the endpoint must pass the precomputed legal moves
+        return valid_moves[0]
+
+    monkeypatch.setattr(api, 'suggest_move_llm', fake_suggest)
+    board = [
+        [2, 4, 8, 16],
+        [None, 4, 8, 32],
+        [2, None, 16, 64],
+        [4, 8, 32, 128],
+    ]
+    data = client.post('/api/llm', json={'board': board}).json()
+    assert data['direction'] in {'left', 'right', 'up', 'down'}
+
+
+def test_llm_returns_409_when_game_over(monkeypatch):
+    # The endpoint should short-circuit before ever calling the LLM.
+    def fail_if_called(board, valid_moves):
+        raise AssertionError('LLM should not be called when the game is over')
+
+    monkeypatch.setattr(api, 'suggest_move_llm', fail_if_called)
+    board = [
+        [2, 4, 2, 4],
+        [4, 2, 4, 2],
+        [2, 4, 2, 4],
+        [4, 2, 4, 2],
+    ]
+    response = client.post('/api/llm', json={'board': board})
+    assert response.status_code == 409
+
+
+def test_llm_returns_502_when_llm_fails(monkeypatch):
+    def raise_llm_error(board, valid_moves):
+        raise LLMError('upstream unavailable')
+
+    monkeypatch.setattr(api, 'suggest_move_llm', raise_llm_error)
+    board = [
+        [2, 4, 8, 16],
+        [None, 4, 8, 32],
+        [2, None, 16, 64],
+        [4, 8, 32, 128],
+    ]
+    response = client.post('/api/llm', json={'board': board})
+    assert response.status_code == 502
 
 
 # --------------------------------------------------------------------------- #
