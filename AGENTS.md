@@ -89,14 +89,14 @@ home-exercise-2048/
 │   ├── src/
 │   │   ├── api.ts                # typed fetch client for the backend
 │   │   ├── hooks/useGame.ts      # game state + keyboard controls
-│   │   ├── components/
-│   │   │   ├── Board.tsx
-│   │   │   ├── Tile.tsx
-│   │   │   ├── Scoreboard.tsx
-│   │   │   └── Controls.tsx
-│   │   ├── App.tsx               # composes the UI
-│   │   ├── App.css               # game/board styling
-│   │   └── index.css             # base styling + palette
+│   │   ├── components/           # folder-per-component (.tsx + .css each)
+│   │   │   ├── Board/            # Board.tsx + Board.css
+│   │   │   ├── Tile/             # Tile.tsx + Tile.css
+│   │   │   ├── Scoreboard/       # Scoreboard.tsx + Scoreboard.css
+│   │   │   └── Button/           # Button.tsx + Button.css
+│   │   ├── styles/global.css     # design tokens + base resets
+│   │   ├── App.tsx               # composes the UI (incl. controls)
+│   │   └── App.css               # app layout (header, controls, overlays)
 │   ├── vite.config.ts            # React plugin + dev proxy /api -> :8000
 │   └── package.json
 ├── .env
