@@ -41,3 +41,8 @@ MAX_TILE_WEIGHT = 1000  # a higher max tile is closer to winning
 CORNER_BONUS = 2000  # the max tile in a corner is easier to build around
 MONOTONICITY_WEIGHT = 100  # monotonic rows/columns are easier to manage
 SMOOTHNESS_WEIGHT = 10  # similar neighbours are easier to merge
+
+# --------------------------------------------------------------------------- #
+# Claude AI model selection
+# --------------------------------------------------------------------------- #
+LLM_MODEL = 'claude-sonnet-4-6'
