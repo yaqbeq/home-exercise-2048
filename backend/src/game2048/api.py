@@ -9,7 +9,8 @@ Endpoints (mounted under ``/api`` by :mod:`game2048.main`):
 
 - ``POST /api/new``  -> a fresh starting board.
 - ``POST /api/move`` -> apply a move to a board and report the outcome.
-- ``POST /api/ai``   -> the AI's suggested next move for a board.
+- ``POST /api/ai``   -> the offline expectimax AI's suggested next move.
+- ``POST /api/llm``  -> a remote LLM's suggested next move.
 """
 
 from typing import Literal, cast
@@ -19,7 +20,8 @@ from pydantic import BaseModel, Field
 
 from game2048 import engine
 from game2048.ai import suggest_move
-from game2048.utils import _MOVES
+from game2048.llm import LLMError, suggest_move_llm
+from game2048.utils import _MOVES, get_valid_moves
 
 router = APIRouter(prefix='/api')
 
@@ -110,4 +112,28 @@ def suggest(request: SuggestionRequest) -> SuggestionResponse:
             detail='No moves available: the game is over.',
         )
     suggested_direction = suggest_move(request.board)
+    return SuggestionResponse(direction=cast(Direction, suggested_direction))
+
+
+@router.post('/llm', response_model=SuggestionResponse)
+def suggest_llm(request: SuggestionRequest) -> SuggestionResponse:
+    """Returns a remote LLM's suggested move direction for the given board.
+
+    Responds with ``409 Conflict`` when the board has no legal moves (the game
+    is over), and ``502 Bad Gateway`` when the LLM is unavailable or returns an
+    unusable answer (see :class:`game2048.llm.LLMError`).
+    """
+    valid_moves = get_valid_moves(request.board)
+    if not valid_moves:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='No moves available: the game is over.',
+        )
+    try:
+        suggested_direction = suggest_move_llm(request.board, valid_moves)
+    except LLMError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
     return SuggestionResponse(direction=cast(Direction, suggested_direction))

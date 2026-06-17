@@ -62,3 +62,7 @@ export const move = (board: Board, direction: Direction): Promise<MoveResult> =>
 /* Asks for AI suggestion for the current board and returns the suggested direction */
 export const suggest = (board: Board): Promise<SuggestionResult> =>
   postJson<SuggestionResult>('/api/ai', { board })
+
+/** Asks a remote LLM for the next move. */
+export const suggestLlm = (board: Board): Promise<SuggestionResult> =>
+  postJson<SuggestionResult>('/api/llm', { board })
