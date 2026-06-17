@@ -2,7 +2,7 @@ import './App.css'
 import { Board } from './components/Board/Board'
 import { Button } from './components/Button/Button'
 import { Scoreboard } from './components/Scoreboard/Scoreboard'
-import { useGame } from './hooks/useGame'
+import { useGame, type SuggestionSource } from './hooks/useGame'
 
 /** Human-readable labels for each move direction. */
 const DIRECTION_LABEL: Record<string, string> = {
@@ -10,6 +10,12 @@ const DIRECTION_LABEL: Record<string, string> = {
   right: 'Right',
   up: 'Up',
   down: 'Down',
+}
+
+/** Human-readable name for each suggestion engine. */
+const SOURCE_LABEL: Record<SuggestionSource, string> = {
+  ai: 'AI',
+  llm: 'Claude',
 }
 
 // Top-level component: wires game state to the UI pieces.
@@ -20,14 +26,16 @@ const App = () => {
     score,
     status,
     suggestion,
+    thinking,
     start,
     askAI,
+    askLLM,
     dismissSuggestion,
-    isThinking,
   } = useGame()
 
   const hasBoard = board.length > 0
   const isPlaying = status === 'playing'
+  const isBusy = thinking !== null
   const startLabel = status === 'idle' ? 'Start Game' : 'Reset'
 
   // JSX below is the rendered UI; `{...}` embeds JS expressions into the markup.
@@ -61,17 +69,18 @@ const App = () => {
           </div>
         )}
 
-        {isThinking && (
+        {thinking && (
           <div className="overlay overlay-suggestion">
-            <p className="overlay-message thinking-dots">Thinking</p>
-            <Button label="Dismiss" onClick={dismissSuggestion} />
+            <p className="overlay-message thinking-dots">
+              {`${SOURCE_LABEL[thinking]} is thinking`}
+            </p>
           </div>
         )}
 
-        {suggestion && (
+        {suggestion && !thinking && (
           <div className="overlay overlay-suggestion">
             <p className="overlay-message">
-              {`Try ${DIRECTION_LABEL[suggestion.direction]}`}
+              {`${SOURCE_LABEL[suggestion.source]} suggests: ${DIRECTION_LABEL[suggestion.direction]}`}
             </p>
             <Button label="Dismiss" onClick={dismissSuggestion} />
           </div>
@@ -84,7 +93,13 @@ const App = () => {
           label="Ask AI"
           onClick={askAI}
           variant="secondary"
-          disabled={!isPlaying}
+          disabled={!isPlaying || isBusy}
+        />
+        <Button
+          label="Ask Claude"
+          onClick={askLLM}
+          variant="secondary"
+          disabled={!isPlaying || isBusy}
         />
       </div>
     </main>

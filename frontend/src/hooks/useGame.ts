@@ -6,10 +6,20 @@ import {
   move,
   newGame,
   suggest,
+  suggestLlm,
 } from '../api'
 
 /** High-level game status used to drive the UI. */
 export type GameStatus = 'idle' | 'playing' | 'won' | 'lost'
+
+/** Which engine produced a suggestion: the offline expectimax AI or the LLM. */
+export type SuggestionSource = 'ai' | 'llm'
+
+/** An active move suggestion shown to the player, tagged with its source. */
+export interface Suggestion {
+  direction: Direction
+  source: SuggestionSource
+}
 
 /** Maps keyboard arrow keys (and WASD) to move directions. */
 const KEY_TO_DIRECTION: Record<string, Direction> = {
@@ -27,17 +37,19 @@ export interface UseGame {
   board: Board
   score: number
   status: GameStatus
-  /** The current AI suggestion, or `null` when none is shown. */
-  suggestion: SuggestionResult | null
-  /* Thinking state for AI response */
-  isThinking: boolean
+  /** The current suggestion (from either engine), or `null` when none is shown. */
+  suggestion: Suggestion | null
+  /** Which engine is currently computing a suggestion, or `null` when idle. */
+  thinking: SuggestionSource | null
   /** Starts (or restarts) a game with a fresh board. */
   start: () => void
   /** Applies a move in the given direction. */
   doMove: (direction: Direction) => void
-  /** Requests an AI move suggestion (placeholder — no real AI yet). */
+  /** Requests a suggestion from the offline expectimax AI. */
   askAI: () => void
-  /** Dismisses the current AI suggestion. */
+  /** Requests a suggestion from the remote LLM. */
+  askLLM: () => void
+  /** Dismisses the current suggestion, whichever engine produced it. */
   dismissSuggestion: () => void
 }
 
@@ -52,10 +64,13 @@ export const useGame = (): UseGame => {
   const [board, setBoard] = useState<Board>([])
   const [score, setScore] = useState(0)
   const [status, setStatus] = useState<GameStatus>('idle')
-  const [suggestion, setSuggestion] = useState<SuggestionResult | null>(null)
-  const [isThinking, setIsThinking] = useState<boolean>(false)
+  const [suggestion, setSuggestion] = useState<Suggestion | null>(null)
+  const [thinking, setThinking] = useState<SuggestionSource | null>(null)
 
-  const suggestionResultCache = useRef(new Map<string, SuggestionResult>())
+  // Each engine caches its own answers, keyed on the serialized board, so
+  // repeat asks are instant and the two engines never share results.
+  const aiCache = useRef(new Map<string, Direction>())
+  const llmCache = useRef(new Map<string, Direction>())
 
   // useCallback memoizes the function so it keeps a stable identity across renders.
   const start = useCallback(() => {
@@ -95,30 +110,52 @@ export const useGame = (): UseGame => {
     [board, status],
   )
 
-  // AI: expectimax alhorithm via API, returns direction
-  const askAI = useCallback(() => {
-    if (status !== 'playing') {
-      return
-    }
-    const key = JSON.stringify(board)
-    if (suggestionResultCache.current.has(key)) {
-      setSuggestion(suggestionResultCache.current.get(key)!)
-      return
-    }
-    setSuggestion(null)
-    setIsThinking(true)
-    suggest(board)
-      .then((result) => {
-        suggestionResultCache.current.set(key, result)
-        setSuggestion(result)
-      })
-      .catch(() => {
-        /* keep current state */
-      })
-      .finally(() => {
-        setIsThinking(false)
-      })
-  }, [board, status])
+  // Shared request flow for both engines: serve from the engine's own cache
+  // when possible, otherwise show a "thinking" state while the call is in
+  // flight and tag the result with its source.
+  const requestSuggestion = useCallback(
+    (
+      source: SuggestionSource,
+      fetcher: (board: Board) => Promise<SuggestionResult>,
+      cache: Map<string, Direction>,
+    ) => {
+      if (status !== 'playing') {
+        return
+      }
+      const key = JSON.stringify(board)
+      const cached = cache.get(key)
+      if (cached) {
+        setSuggestion({ direction: cached, source })
+        return
+      }
+      setSuggestion(null)
+      setThinking(source)
+      fetcher(board)
+        .then((result) => {
+          cache.set(key, result.direction)
+          setSuggestion({ direction: result.direction, source })
+        })
+        .catch(() => {
+          /* keep current state */
+        })
+        .finally(() => {
+          setThinking(null)
+        })
+    },
+    [board, status],
+  )
+
+  // AI: offline expectimax via /api/ai.
+  const askAI = useCallback(
+    () => requestSuggestion('ai', suggest, aiCache.current),
+    [requestSuggestion],
+  )
+
+  // LLM: remote model via /api/llm.
+  const askLLM = useCallback(
+    () => requestSuggestion('llm', suggestLlm, llmCache.current),
+    [requestSuggestion],
+  )
 
   const dismissSuggestion = useCallback(() => setSuggestion(null), [])
 
@@ -145,10 +182,11 @@ export const useGame = (): UseGame => {
     score,
     status,
     suggestion,
-    isThinking,
+    thinking,
     start,
     doMove,
     askAI,
+    askLLM,
     dismissSuggestion,
   }
 }
