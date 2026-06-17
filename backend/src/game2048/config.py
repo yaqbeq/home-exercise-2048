@@ -16,7 +16,7 @@ MAX_INITIAL_NUMBERS = 8
 CHANCE_OF_FOUR = 0.1
 
 # The game is won as soon as any tile reaches this value.
-WIN_VALUE = 32
+WIN_VALUE = 2048
 
 
 # --------------------------------------------------------------------------- #
