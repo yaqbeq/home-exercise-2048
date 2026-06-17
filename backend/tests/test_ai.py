@@ -188,7 +188,8 @@ def test_max_value_winning_board_returns_reward():
         [None, None, None, None],
         [None, None, None, None],
     ]
-    assert max_value(board, depth=3) == WIN_REWARD
+    # Terminal rewards are scaled by remaining depth so earlier wins rank higher.
+    assert max_value(board, depth=3) == WIN_REWARD * 4
 
 
 def test_max_value_lost_board_returns_penalty():
@@ -199,7 +200,8 @@ def test_max_value_lost_board_returns_penalty():
         [2, 4, 2, 4],
         [4, 2, 4, 2],
     ]
-    assert max_value(board, depth=3) == LOSS_PENALTY
+    # Terminal penalties are scaled by remaining depth so earlier losses rank lower.
+    assert max_value(board, depth=3) == LOSS_PENALTY * 4
 
 
 # --------------------------------------------------------------------------- #

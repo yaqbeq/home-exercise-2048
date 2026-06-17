@@ -119,10 +119,13 @@ def heuristic_score(board: list[list[int | None]]) -> float:
 
 def max_value(board: list[list[int | None]], depth: int) -> float:
     """Value of a max node: the player picks the move with the best expected score."""
+    # Scale terminal rewards by the remaining depth so the search prefers
+    # winning sooner (and, symmetrically, delays losing): a win/loss found with
+    # more depth left is closer at hand and therefore weighted more heavily.
     if has_won(board):
-        return WIN_REWARD
+        return WIN_REWARD * (depth + 1)
     if not has_available_moves(board):
-        return LOSS_PENALTY
+        return LOSS_PENALTY * (depth + 1)
     if depth <= 0:
         return heuristic_score(board)
     best_score = float('-inf')
