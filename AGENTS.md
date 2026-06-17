@@ -99,6 +99,8 @@ home-exercise-2048/
 │   │   └── index.css             # base styling + palette
 │   ├── vite.config.ts            # React plugin + dev proxy /api -> :8000
 │   └── package.json
+├── .env
+├── AGENTS.md
 └── README.md
 ```
 

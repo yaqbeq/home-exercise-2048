@@ -58,6 +58,7 @@ home-exercise-2048/
 │   │   ├── components/           # Board, Tile, Scoreboard, Button
 │   │   └── App.tsx               # composes the UI
 │   └── package.json
+├── .env
 ├── AGENTS.md
 └── README.md
 ```
