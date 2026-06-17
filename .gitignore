@@ -69,12 +69,30 @@ config/*.yml
 config/*.json
 
 # ------------------------
+# Node / Frontend
+# ------------------------
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------
 # IDE / Editors
 # ------------------------
 # .vscode/
 .idea/
 *.swp
 *.swo
+*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
 # ------------------------
 # Docker

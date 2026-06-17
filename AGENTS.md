@@ -7,7 +7,8 @@ Guidance for AI agents and contributors working in this repository.
 A small, from-scratch implementation of the [2048](https://play2048.co) game,
 built as a home exercise. It has two parts:
 
-- **`backend/`** — a Python game engine plus a **stateless** FastAPI HTTP API.
+- **`backend/`** — a Python game engine plus a **stateless** FastAPI HTTP API,
+  with two move advisers: an offline expectimax AI and an optional remote LLM.
 - **`frontend/`** — a Vite + React + TypeScript single-page app (the UI).
 
 The backend owns the game rules; the frontend holds the board/score in client
@@ -28,11 +29,12 @@ Where they conflict with the classic 2048 game, **these requirements win**.
 6. **Endgame.** Detect **Win** (a tile reaches `2048`) and **Lose** (no empty
    cells and no valid moves remain).
 7. **AI suggestion.** During play, let the player ask an AI for the best next
-   move to avoid game over and maximize the chance of winning. May be an offline
-   model or a remote server — if a remote model is ever used, keep its secrets
-   in a git-ignored `.env` file and **never commit credentials**. Implemented as
-   an **offline depth-limited expectimax** evaluator in `ai.py` (no network, no
-   API keys needed).
+   move to avoid game over and maximize the chance of winning. Two advisers are
+   implemented: an **offline depth-limited expectimax** evaluator in `ai.py`
+   (the default — no network, no API keys), and an **optional remote LLM**
+   (Anthropic Claude) in `llm.py` behind the **Ask Claude** button. The remote
+   model's API key lives in a git-ignored `.env` file and is **never
+   committed**.
 
 Stated assumptions (reasonable choices where the spec is silent):
 
@@ -69,16 +71,19 @@ Documentation is part of "done" — keep it in sync with the code.
 home-exercise-2048/
 ├── backend/
 │   ├── src/game2048/
-│   │   ├── config.py     # tunable game + AI parameters (board, win value, odds, AI weights)
+│   │   ├── config.py     # tunable game + AI parameters (board, win value, odds, AI weights, LLM model)
 │   │   ├── engine.py     # pure domain logic: move functions + helpers
 │   │   ├── ai.py         # offline expectimax AI: search + heuristic move suggestion
-│   │   ├── utils.py      # shared `_MOVES` direction -> move-function mapping
-│   │   ├── api.py        # FastAPI router: POST /api/new, POST /api/move, POST /api/ai
+│   │   ├── llm.py        # optional remote LLM (Claude) move suggestion + validation
+│   │   ├── utils.py      # shared `_MOVES` map + `get_valid_moves` helper
+│   │   ├── api.py        # FastAPI router: POST /api/new, /api/move, /api/ai, /api/llm
 │   │   └── main.py       # FastAPI app: CORS, router wiring, /health
 │   ├── tests/
 │   │   ├── test_engine.py
 │   │   ├── test_api.py
-│   │   └── test_ai.py    # heuristic helpers, expectimax search, move suggestion
+│   │   ├── test_ai.py    # heuristic helpers, expectimax search, move suggestion
+│   │   ├── test_llm.py   # LLM parsing/validation with the network call mocked
+│   │   └── test_utils.py # `_MOVES` map + `get_valid_moves`
 │   └── pyproject.toml
 ├── frontend/
 │   ├── src/
@@ -109,10 +114,9 @@ home-exercise-2048/
 - **Engine is pure.** `engine.py` exposes side-effect-free functions (except
   `place_number`, which uses `random`). Moves return `(new_board, score_gained)`
   and never mutate the input board.
-- **AI is offline-only.** `ai.py` is a self-contained, depth-limited
-  **expectimax** search over the engine functions (no network, no API keys —
-  any secrets for a future remote model would live in a git-ignored `.env`).
-  Max nodes maximize over legal moves; chance nodes take the
+- **AI advisers.** Two are provided. `ai.py` is a self-contained, depth-limited
+  **expectimax** search over the engine functions (no network, no API keys) and
+  is the default. Max nodes maximize over legal moves; chance nodes take the
   probability-weighted average over every `2`/`4` spawn. Terminal boards return
   large win/loss values; non-terminal leaves are scored by a weighted heuristic
   (empty cells, potential merges, max tile, corner bonus, monotonicity,
@@ -121,6 +125,16 @@ home-exercise-2048/
   confidence** was prototyped and then removed to keep the module lean; it is
   documented in the README as a possible extension. The AI is exposed over the
   API as `POST /api/ai` and wired into the UI via the **Ask AI** button.
+- **Optional remote LLM.** `llm.py` is an opt-in second adviser that calls
+  Anthropic Claude. It builds a system prompt (game rules + strategy) and sends
+  the board plus the pre-computed legal moves; the reply is parsed and the
+  returned direction is **re-validated against the legal moves** before it is
+  trusted (`LLMError` otherwise). The API key is read from the
+  `ANTHROPIC_API_KEY` environment variable (git-ignored `.env`), never
+  committed. The model name is the only LLM tunable in `config.py`
+  (`LLM_MODEL`). Exposed as `POST /api/llm` and wired into the UI via the **Ask
+  Claude** button. Tests mock the network call so the suite stays offline and
+  deterministic.
 
 ## API contract
 
@@ -129,7 +143,8 @@ Routes are mounted under `/api` (see `main.py`).
 - `POST /api/new` → `{ "board": Board }`
 - `POST /api/move` with `{ "board": Board, "direction": "left"|"right"|"up"|"down" }`
   → `{ "board", "score_gained", "changed", "win", "game_over" }`
-- `POST /api/ai` with `{ "board": Board }` → `{ "direction": Direction }`
+- `POST /api/ai` with `{ "board": Board }` → `{ "direction": Direction }` (offline)
+- `POST /api/llm` with `{ "board": Board }` → `{ "direction": Direction }` (remote LLM)
 - `GET /health` → `{ "status": "ok" }`
 
 Notes:
@@ -137,8 +152,10 @@ Notes:
 - `Board` is a 4×4 array of cells; a cell is an `int` tile or `null` for empty.
 - An **invalid direction** is rejected with HTTP **422** (Pydantic `Literal`
   validation), not 400.
-- `POST /api/ai` on a board with no legal moves is rejected with HTTP **409**
-  (the game is over, so there is no move to suggest).
+- `POST /api/ai` or `POST /api/llm` on a board with no legal moves is rejected
+  with HTTP **409** (the game is over, so there is no move to suggest).
+- `POST /api/llm` returns HTTP **502** when the remote model is unavailable or
+  returns an unusable answer (malformed or illegal move) — see `LLMError`.
 - A new tile spawns **only** when a move changes the board (`changed: true`).
 
 ## Game rules (assumptions)
@@ -195,7 +212,10 @@ uv run pytest                             # run all tests
 uv run pytest tests/test_api.py -v        # one file, verbose
 uv run ruff check .                       # lint
 uv run ruff format .                      # format
-uv run uvicorn game2048.main:app --reload # run API at http://localhost:8000
+# run API at http://localhost:8000 (loads ANTHROPIC_API_KEY from a git-ignored
+# .env to enable the Ask Claude button; create an empty .env or drop the flag
+# if you are not using Claude):
+uv run --env-file ../.env uvicorn game2048.main:app --reload
 ```
 
 Frontend (run from `frontend/`):
@@ -221,19 +241,29 @@ terminals; the Vite proxy forwards `/api/*` to the backend.
 
 ## Current status / next steps
 
-- ✅ Engine, stateless API (`/api/new`, `/api/move`, `/api/ai`), and React UI
-  (board, keyboard moves, score, start/reset, win/lose) are implemented and
-  tested.
+- ✅ Engine, stateless API (`/api/new`, `/api/move`, `/api/ai`, `/api/llm`), and
+  React UI (board, keyboard moves, score, start/reset, win/lose) are implemented
+  and tested.
 - ✅ **AI move suggestion** (`ai.py`) is implemented: offline expectimax with a
   weighted heuristic that returns the best direction, covered by `test_ai.py`.
 - ✅ The AI is exposed over the API (`POST /api/ai`) and wired into the UI via
   the **Ask AI** button (a "Thinking" overlay while it searches, plus a
   client-side cache keyed on the board for instant repeat answers).
+- ✅ **Optional remote LLM** (`llm.py`, Anthropic Claude) is exposed over the
+  API (`POST /api/llm`) and wired into the UI via the **Ask Claude** button. The
+  backend re-validates the model's move against the legal moves; the API key is
+  read from a git-ignored `.env`. Covered by `test_llm.py` / `test_api.py` with
+  the network call mocked. The two advisers are independent in the UI (ask one,
+  dismiss, ask the other, switch back).
 
 ## Guardrails
 
-- Do **not** add credentials, API keys, or remote AI calls. The AI must be
-  offline.
+- The default AI (`ai.py`) must stay **offline** (no network, no API keys). Do
+  **not** make it call a remote service.
+- The **optional** LLM adviser (`llm.py`) may call Anthropic, but its API key
+  must come from the `ANTHROPIC_API_KEY` environment variable / git-ignored
+  `.env` — **never commit credentials**, and always re-validate the model's
+  answer against the engine's legal moves.
 - Do **not** reintroduce server-side game state; keep the API stateless.
 - Do **not** add dependencies without a clear need.
 - Keep **`README.md`** and **`AGENTS.md`** up to date for meaningful changes

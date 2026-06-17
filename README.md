@@ -4,8 +4,9 @@ A small, from-scratch implementation of the [2048](https://play2048.co) game.
 
 It has two parts:
 
-- **`backend/`** — a Python game engine, an offline **expectimax AI** move
-  adviser, and a **stateless** FastAPI HTTP API.
+- **`backend/`** — a Python game engine, two move advisers (an offline
+  **expectimax AI** and an optional remote **LLM**), and a **stateless**
+  FastAPI HTTP API.
 - **`frontend/`** — a Vite + React + TypeScript single-page app (the UI).
 
 The backend owns the game rules; the frontend keeps the board and score in
@@ -26,10 +27,13 @@ they conflict with the classic 2048 game, **these requirements win**.
 6. **Endgame.** Detect **Win** (a tile reaches `2048`) and **Lose** (no empty
    cells and no valid moves remain).
 7. **AI suggestion.** During play, let the player ask an AI for the best next
-   move to avoid game over and maximise the chance of winning. The AI runs
-   **offline** (no network, no API keys needed) — implemented as a
-   depth-limited expectimax search (see
-   [AI move suggestion](#ai-move-suggestion)).
+   move to avoid game over and maximise the chance of winning. Two advisers are
+   provided:
+   - an **offline** depth-limited expectimax search (the default — no network,
+     no API key needed; see [AI move suggestion](#ai-move-suggestion)), and
+   - an **optional remote LLM** (Anthropic Claude) behind an **Ask Claude**
+     button. The API key lives in a git-ignored `.env` file and is **never
+     committed** (see [Optional: remote LLM adviser](#optional-remote-llm-adviser)).
 
 ## Project structure
 
@@ -37,13 +41,15 @@ they conflict with the classic 2048 game, **these requirements win**.
 home-exercise-2048/
 ├── backend/
 │   ├── src/game2048/
-│   │   ├── config.py     # tunable game + AI parameters
+│   │   ├── config.py     # tunable game + AI parameters (incl. LLM model)
 │   │   ├── engine.py     # pure domain logic (move functions + helpers)
 │   │   ├── ai.py         # offline expectimax AI move adviser
+│   │   ├── llm.py         # optional remote LLM (Claude) move adviser
 │   │   ├── utils.py      # shared direction -> move-function mapping
-│   │   ├── api.py        # FastAPI router: POST /api/new, POST /api/move
+│   │   ├── api.py        # FastAPI router: /api/new, /api/move, /api/ai, /api/llm
 │   │   └── main.py       # FastAPI app: CORS, router wiring, /health
-│   ├── tests/            # test_engine.py, test_api.py, test_ai.py
+│   ├── tests/            # test_engine.py, test_api.py, test_ai.py,
+│   │                     # test_llm.py, test_utils.py
 │   └── pyproject.toml
 ├── frontend/
 │   ├── src/
@@ -67,6 +73,22 @@ cd backend
 uv sync          # create .venv and install game2048 (editable) + dev tools
 ```
 
+#### Optional: remote LLM adviser
+
+The offline AI needs no configuration. To also enable the **Ask Claude** button,
+provide an [Anthropic](https://console.anthropic.com) API key via a git-ignored
+`.env` file at the repo root (or in `backend/`):
+
+```bash
+# .env  (never commit this file)
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+The key is read from the environment at request time. The run command below
+loads it from `.env` via `--env-file` (VS Code's integrated terminal also loads
+it automatically, see `.vscode/settings.json`). Without a key the rest of the
+app works fine and only **Ask Claude** is unavailable.
+
 ### Frontend
 
 Requires [Node.js](https://nodejs.org/) (18+).
@@ -83,8 +105,12 @@ Start the backend and the frontend dev server in separate terminals.
 ```bash
 # terminal 1 — backend API at http://localhost:8000
 cd backend
-uv run uvicorn game2048.main:app --reload
+uv run --env-file ../.env uvicorn game2048.main:app --reload
 ```
+
+> `--env-file` requires the file to exist. If you are not using **Ask Claude**,
+> either create an empty `.env` at the repo root or drop the
+> `--env-file ../.env` flag.
 
 ```bash
 # terminal 2 — frontend at http://localhost:5173
@@ -117,6 +143,9 @@ uv run python -m game2048.ai   # prints the suggested move for a sample board
   and win/lose feedback.
 - **Offline AI adviser** — an expectimax search that suggests the best next move
   to play (details below).
+- **Optional LLM adviser** — an **Ask Claude** button that asks a remote
+  Anthropic model for the next move, with the backend validating the answer
+  against the legal moves before returning it (requires an API key).
 
 ## API
 
@@ -128,21 +157,26 @@ keeps no game state between requests.
   `{ "board": Board, "direction": "left" | "right" | "up" | "down" }`
   → `{ "board", "score_gained", "changed", "win", "game_over" }`
 - `POST /api/ai` with `{ "board": Board }` → `{ "direction": Direction }`
+  (offline expectimax)
+- `POST /api/llm` with `{ "board": Board }` → `{ "direction": Direction }`
+  (remote LLM)
 - `GET /health` → `{ "status": "ok" }`
 
 A `Board` is a 4×4 array of cells, where a cell is an integer tile or `null` for
 an empty cell. A new tile spawns only when a move changes the board. An invalid
 `direction` is rejected with HTTP **422** (Pydantic validation). A request to
-`POST /api/ai` for a board with no legal moves is rejected with HTTP **409**
-(the game is over, so there is no move to suggest).
+`POST /api/ai` or `POST /api/llm` for a board with no legal moves is rejected
+with HTTP **409** (the game is over, so there is no move to suggest).
+`POST /api/llm` additionally returns HTTP **502** when the remote model is
+unavailable or returns an unusable answer (an illegal or malformed move).
 
 ## AI move suggestion
 
 The AI lives in [backend/src/game2048/ai.py](backend/src/game2048/ai.py) and runs
 fully **offline** — it only calls the pure engine functions and makes no network
-requests. The exercise allows a remote model, but the offline expectimax needs
-no API keys at all; if a hosted model were ever added, its secrets would live in
-a git-ignored `.env` file rather than being committed.
+requests. It is the **default** adviser (the **Ask AI** button). An **optional**
+remote LLM adviser is also provided (the **Ask Claude** button); see
+[Optional LLM adviser](#optional-llm-adviser) below.
 
 ### Why expectimax
 
@@ -154,29 +188,33 @@ opponent's "min" layer with a **chance** layer that averages over the possible
 spawns, weighted by their probability — which matches how the game actually
 behaves.
 
-### Why not an LLM (Claude / ChatGPT / other large models)
+### Why expectimax is the default (not the LLM)
 
-A general-purpose large language model is the wrong tool for this problem:
+The offline expectimax is the **primary** adviser; the LLM is an optional extra.
+A general-purpose large language model is not the best tool for the *core* of
+this problem:
 
-- **It is the simplest thing that fits.** The AI must run **offline**, and the
-  local expectimax does so with no API key, no network call, and no extra
-  dependencies. A hosted model (Claude, ChatGPT, etc.) would mean a network
-  round-trip plus a secret to manage (in a git-ignored `.env`) for no benefit
-  here.
+- **It is the simplest thing that fits.** The required adviser must run
+  **offline**, and the local expectimax does so with no API key, no network
+  call, and no extra dependencies. A hosted model (Claude, ChatGPT, etc.) means
+  a network round-trip plus a secret to manage (in a git-ignored `.env`).
 - **2048 is exact search, not language.** The game has clear rules, a small
   branching factor, and a well-defined value to optimise. A few-millisecond
   expectimax search plays this near-optimally; an LLM only *approximates*
-  reasoning over the board and would still be slower and less reliable.
+  reasoning over the board and is slower and less reliable.
 - **No probabilistic guarantees.** Expectimax provably weighs the random spawns
   by their true probabilities. An LLM has no such guarantee — it can hallucinate
-  illegal moves or miss a forced loss.
+  illegal moves or miss a forced loss (which is why the `/api/llm` endpoint
+  re-validates the model's answer against the legal moves).
 - **Cost, latency, and determinism.** The local search is free, instant, and
   deterministic (so it is easy to unit-test). A remote model adds latency, cost,
-  and non-determinism for no gain on a 4×4 grid.
+  and non-determinism.
 
-In short: an LLM shines at open-ended, fuzzy, language-heavy tasks. 2048 is a
-small, well-specified search problem, where a classic algorithm is faster,
-cheaper, verifiable, and offline by construction.
+The **Ask Claude** button exists to demonstrate how a remote model *can* be
+integrated safely (server-side key, validated output) — see
+[Optional LLM adviser](#optional-llm-adviser). For a small, well-specified 4×4
+search problem, the classic algorithm is faster, cheaper, verifiable, and
+offline by construction.
 
 ### Alternative algorithms
 
@@ -226,14 +264,42 @@ position healthy:
 All weights are tunable in
 [config.py](backend/src/game2048/config.py).
 
-### Public functions
-
-- `suggest_move(board, depth)` → the best direction (`''` if the game is over).
-
 The AI is exposed over the API as `POST /api/ai` and wired into the UI via the
 **Ask AI** button, which shows a "Thinking" overlay while the search runs and
 then the suggested move. Repeated requests for the same board are served from a
 small client-side cache, so they return instantly without another network call.
+
+### Optional LLM adviser
+
+The optional LLM adviser lives in
+[backend/src/game2048/llm.py](backend/src/game2048/llm.py) and powers the **Ask
+Claude** button. It is a self-contained alternative to the offline AI and is
+only reachable when an `ANTHROPIC_API_KEY` is configured (see
+[Optional: remote LLM adviser](#optional-remote-llm-adviser)).
+
+How a request flows through `POST /api/llm`:
+
+1. The backend computes the **legal moves** for the board. If there are none,
+   it returns **409** without calling the model.
+2. It sends the model a system prompt (the game rules and a move-selection
+   strategy) plus the board and the legal moves as JSON, asking for a single
+   move back as `{ "direction": "<one of the legal moves>" }`.
+3. It parses the reply and **re-validates** the returned direction against the
+   legal moves. Anything unusable — a network failure, malformed JSON, or an
+   illegal move — raises an error surfaced to the client as **502**.
+
+This keeps the integration safe by construction: the API key never leaves the
+server, and the engine (not the model) has the final say on what counts as a
+legal move. The model and request parameters are configured in
+[config.py](backend/src/game2048/config.py) (`LLM_MODEL`). Like the offline AI,
+the UI caches answers per board so repeat asks are instant. The two advisers are
+independent: you can ask one, dismiss it, ask the other, and switch back freely.
+
+### Public functions
+
+- `suggest_move(board, depth)` → the best direction (`''` if the game is over).
+- `suggest_move_llm(board, valid_moves)` → the LLM's chosen direction, validated
+  against `valid_moves` (raises `LLMError` when unavailable or unusable).
 
 ### Possible extensions
 
@@ -265,6 +331,9 @@ Game and AI parameters live in
 - **Game:** board size, initial tile count range, odds of spawning a `4`, and
   the winning value.
 - **AI:** search depth, win/loss rewards, and the heuristic weights.
+- **LLM:** the Anthropic model name (`LLM_MODEL`). The API key itself is **not**
+  stored here — it is read from the `ANTHROPIC_API_KEY` environment variable
+  (see [Optional: remote LLM adviser](#optional-remote-llm-adviser)).
 
 ## Development
 
@@ -295,7 +364,8 @@ npm run format:check  # Prettier — verify only
 - A new tile (`2` or `4`) is added only after a valid move.
 - The game is won when any tile reaches `2048`.
 - The game is lost when there are no empty cells and no valid moves.
-- The AI runs offline via a heuristic expectimax evaluator (no remote model).
+- The default AI runs offline via a heuristic expectimax evaluator. An optional
+  remote LLM adviser is available when an `ANTHROPIC_API_KEY` is configured.
 
 ## Status
 
@@ -305,3 +375,8 @@ npm run format:check  # Prettier — verify only
   suggests the best move is implemented and tested.
 - ✅ The AI is exposed over the API (`POST /api/ai`) and wired into the UI via
   the **Ask AI** button (with a "Thinking" overlay and a client-side cache).
+- ✅ Optional remote LLM adviser (`llm.py`, Anthropic Claude) is exposed over
+  the API (`POST /api/llm`) and wired into the UI via the **Ask Claude** button;
+  the backend validates the model's answer against the legal moves and the key
+  is read from a git-ignored `.env`. Covered by `test_llm.py` and `test_api.py`
+  with the network call mocked.
