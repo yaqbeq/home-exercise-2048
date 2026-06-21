@@ -34,7 +34,19 @@ they conflict with the classic 2048 game, **these requirements win**.
    - a **remote LLM** (Anthropic Claude) behind an **Ask Claude** button.
      The API key lives in a git-ignored `.env` file (see [Optional: remote LLM adviser](#optional-remote-llm-adviser)).
 
-## Project structure
+## Project architecture & structure
+
+```mermaid
+flowchart LR
+    UI[React UI<br/>owns board + score] -->|POST /api/move| API[FastAPI<br/>stateless router]
+    UI -->|POST /api/ai| API
+    UI -->|POST /api/llm| API
+    API --> ENGINE[engine.py<br/>pure game rules]
+    API --> AI[ai.py<br/>offline expectimax]
+    API -->|optional| LLM[llm.py<br/>Anthropic Claude]
+    AI --> ENGINE
+    LLM -.->|validated against<br/>engine legal moves| ENGINE
+```
 
 ```text
 home-exercise-2048/
@@ -80,7 +92,7 @@ provide an [Anthropic](https://console.anthropic.com) API key via a git-ignored
 `.env` file at the repo root (or in `backend/`):
 
 ```bash
-# .env  (never commit this file)
+# .env
 ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
