@@ -12,6 +12,73 @@ It has two parts:
 The backend owns the game rules; the frontend keeps the board and score in
 client state and calls the API for each move.
 
+## Table of contents
+
+- [Quick start](#quick-start)
+- [Additional configuration](#additional-configuration)
+- [Exercise requirements](#exercise-requirements)
+- [Architecture](#architecture)
+- [API](#api)
+- [AI move suggestion](#ai-move-suggestion)
+- [Further development](#further-development)
+
+## Quick start
+
+Run the backend and the frontend in two terminals. You need
+[uv](https://docs.astral.sh/uv/) (Python `>=3.13`) and
+[Node.js](https://nodejs.org/) (18+).
+
+```bash
+# terminal 1 — backend API at http://localhost:8000
+cd backend
+uv sync                                                    # install deps into .venv
+uv run --env-file ../.env uvicorn game2048.main:app --reload
+```
+
+```bash
+# terminal 2 — frontend at http://localhost:5173
+cd frontend
+npm install
+npm run dev
+```
+
+Open <http://localhost:5173> and play with the arrow keys (or W A S D). The Vite
+dev server proxies `/api/*` to the backend, so no extra configuration is needed.
+Interactive API docs are available at <http://localhost:8000/docs>.
+
+### Optional: remote LLM adviser
+
+The offline **Ask AI** adviser needs no configuration. To also enable the **Ask
+Claude** button, provide an [Anthropic](https://console.anthropic.com) API key
+via a git-ignored `.env` file at the repo root (or in `backend/`):
+
+```bash
+# .env
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+The key is read from the environment at request time; the backend command above
+loads it via `--env-file` (VS Code's integrated terminal also loads it
+automatically — see `.vscode/settings.json`). Without a key the rest of the app
+works fine and only **Ask Claude** is unavailable.
+
+**Important:**
+> `--env-file` requires the file to exist. If you are not using **Ask Claude**,
+> either create an empty `.env` at the repo root or drop the
+> `--env-file ../.env` flag.
+
+## Additional configuration
+
+Game and AI parameters live in
+[backend/src/game2048/config.py](backend/src/game2048/config.py):
+
+- **Game:** board size, initial tile count range, odds of spawning a `4`, and
+  the winning value.
+- **AI:** search depth, win/loss rewards, and the heuristic weights.
+- **LLM:** the Anthropic model name (`LLM_MODEL`). The API key itself is **not**
+  stored here — it is read from the `ANTHROPIC_API_KEY` environment variable
+  (see [Optional: remote LLM adviser](#optional-remote-llm-adviser)).
+
 ## Exercise requirements
 
 These are the original exercise requirements the project satisfies. Where
@@ -34,7 +101,20 @@ they conflict with the classic 2048 game, **these requirements win**.
    - a **remote LLM** (Anthropic Claude) behind an **Ask Claude** button.
      The API key lives in a git-ignored `.env` file (see [Optional: remote LLM adviser](#optional-remote-llm-adviser)).
 
-## Project architecture & structure
+Where the exercise leaves a choice open, the project assumes:
+
+- The board is a square grid (default 4×4, configurable in `config.py`).
+- Empty cells are represented as `None` in Python and `null` in JSON.
+- A spawned tile is a `2` 90% of the time and a `4` the other 10%.
+
+## Architecture
+
+The API is **stateless** — the React UI owns the board and score and sends the
+full board with every request, while the backend stays a thin wrapper over the
+pure, side-effect-free engine. The UI handles rendering, keyboard controls
+(arrows or W A S D), the live score, start/reset, and win/lose feedback. Both
+advisers defer to the engine as the single source of truth: the LLM's answer is
+re-validated against the engine's legal moves before it is returned.
 
 ```mermaid
 flowchart LR
@@ -74,84 +154,10 @@ home-exercise-2048/
 └── README.md
 ```
 
-## Setup
-
-### Backend
-
-Requires [uv](https://docs.astral.sh/uv/) and Python `>=3.13`.
-
-```bash
-cd backend
-uv sync          # create .venv and install game2048 (editable) + dev tools
-```
-
-#### Optional: remote LLM adviser
-
-The offline AI needs no configuration. To also enable the **Ask Claude** button,
-provide an [Anthropic](https://console.anthropic.com) API key via a git-ignored
-`.env` file at the repo root (or in `backend/`):
-
-```bash
-# .env
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-```
-
-The key is read from the environment at request time. The run command below
-loads it from `.env` via `--env-file` (VS Code's integrated terminal also loads
-it automatically, see `.vscode/settings.json`). Without a key the rest of the
-app works fine and only **Ask Claude** is unavailable.
-
-### Frontend
-
-Requires [Node.js](https://nodejs.org/) (18+).
-
-```bash
-cd frontend
-npm install
-```
-
-## Running the app
-
-Start the backend and the frontend dev server in separate terminals.
-
-```bash
-# terminal 1 — backend API at http://localhost:8000
-cd backend
-uv run --env-file ../.env uvicorn game2048.main:app --reload
-```
-
-> `--env-file` requires the file to exist. If you are not using **Ask Claude**,
-> either create an empty `.env` at the repo root or drop the
-> `--env-file ../.env` flag.
-
-```bash
-# terminal 2 — frontend at http://localhost:5173
-cd frontend
-npm run dev
-```
-
-Open <http://localhost:5173> and play with the arrow keys (or W A S D). The Vite
-dev server proxies `/api/*` to the backend, so no extra configuration is needed.
-
-Interactive API docs are available at <http://localhost:8000/docs>.
-
-## Features
-
-The core game rules above are backed by a small, testable architecture:
-
-- **Stateless HTTP API** — the server stores no game state; every request
-  carries the full board, and the API is a thin wrapper over pure,
-  side-effect-free engine functions.
-- **React UI** — board rendering, keyboard controls (arrows or W A S D), a live
-  score, start/reset, and win/lose feedback.
-- **Two move advisers** — an offline expectimax search (the default **Ask AI**)
-  and an optional remote LLM (**Ask Claude**), with the backend validating the
-  model's answer against the legal moves before returning it (details below).
-
 ## API
 
-The API is **stateless**: each request carries the full board and the server
-keeps no game state between requests.
+All routes are mounted under `/api`; every request carries the full board, and
+the server keeps no game state between requests.
 
 - `POST /api/new` → `{ "board": Board }`
 - `POST /api/move` with
@@ -296,47 +302,9 @@ legal move. The model and request parameters are configured in
 the UI caches answers per board so repeat asks are instant. The two advisers are
 independent: you can ask one, dismiss it, ask the other, and switch back freely.
 
-### Public functions
-
-- `suggest_move(board, depth)` → the best direction (`''` if the game is over).
-- `suggest_move_llm(board, valid_moves)` → the LLM's chosen direction, validated
-  against `valid_moves` (raises `LLMError` when unavailable or unusable).
-
-### Possible extensions
-
-The AI deliberately stops at "which move is best". A natural extension — built
-earlier and then removed to keep the module lean — is a **move-confidence**
-score: turn the per-move expectimax scores into a probability distribution with
-a softmax, so the UI could show *how sure* the AI is, not just its pick.
-
-The one subtlety is that the scores live on an arbitrary, board-size-dependent
-scale, so a fixed softmax temperature is meaningless. Deriving the temperature
-from the *spread* of each turn's scores fixes that:
-
-```text
-temperature = (best_score - worst_score) / sharpness
-```
-
-This keeps the confidence stable regardless of the heuristic weights or the
-board size, with `sharpness` a small dimensionless knob (around 3–5): higher
-values make the AI look more confident in its single best move, lower values
-flatten the distribution toward an even split. It was left out because the
-exercise only asks for the best move, and the extra surface area was not worth
-the complexity — but it is a clean way to enrich the hint if desired.
-
-## Configuration
-
-Game and AI parameters live in
-[backend/src/game2048/config.py](backend/src/game2048/config.py):
-
-- **Game:** board size, initial tile count range, odds of spawning a `4`, and
-  the winning value.
-- **AI:** search depth, win/loss rewards, and the heuristic weights.
-- **LLM:** the Anthropic model name (`LLM_MODEL`). The API key itself is **not**
-  stored here — it is read from the `ANTHROPIC_API_KEY` environment variable
   (see [Optional: remote LLM adviser](#optional-remote-llm-adviser)).
 
-## Development
+## Further development
 
 ### Backend (run from `backend/`)
 
@@ -356,11 +324,3 @@ npm run lint          # ESLint (code quality)
 npm run format        # Prettier — write
 npm run format:check  # Prettier — verify only
 ```
-
-## Assumptions
-
-Where the exercise leaves a choice open, the project assumes:
-
-- The board is a square grid (default 4×4, configurable in `config.py`).
-- Empty cells are represented as `None` in Python and `null` in JSON.
-- A spawned tile is a `2` 90% of the time and a `4` the other 10%.
