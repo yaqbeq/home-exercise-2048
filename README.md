@@ -29,11 +29,10 @@ they conflict with the classic 2048 game, **these requirements win**.
 7. **AI suggestion.** During play, let the player ask an AI for the best next
    move to avoid game over and maximise the chance of winning. Two advisers are
    provided:
-   - an **offline** depth-limited expectimax search (the default — no network,
-     no API key needed; see [AI move suggestion](#ai-move-suggestion)), and
-   - an **optional remote LLM** (Anthropic Claude) behind an **Ask Claude**
-     button. The API key lives in a git-ignored `.env` file and is **never
-     committed** (see [Optional: remote LLM adviser](#optional-remote-llm-adviser)).
+   - an **offline** depth-limited expectimax search;
+     see [AI move suggestion](#ai-move-suggestion), and
+   - a **remote LLM** (Anthropic Claude) behind an **Ask Claude** button.
+     The API key lives in a git-ignored `.env` file (see [Optional: remote LLM adviser](#optional-remote-llm-adviser)).
 
 ## Project structure
 
@@ -126,20 +125,16 @@ Interactive API docs are available at <http://localhost:8000/docs>.
 
 ## Features
 
-- **4×4 game engine** with left / right / up / down moves and adjacent-tile
-  merging, implemented as pure, side-effect-free functions.
-- **Random initial board** of `2`s and a `2`/`4` spawn after every
-  board-changing move.
-- **Win / lose detection** (reach `2048`, or no moves remain).
+The core game rules above are backed by a small, testable architecture:
+
 - **Stateless HTTP API** — the server stores no game state; every request
-  carries the full board.
-- **React UI** — board rendering, keyboard controls, live score, start/reset,
-  and win/lose feedback.
-- **Offline AI adviser** — an expectimax search that suggests the best next move
-  to play (details below).
-- **Optional LLM adviser** — an **Ask Claude** button that asks a remote
-  Anthropic model for the next move, with the backend validating the answer
-  against the legal moves before returning it (requires an API key).
+  carries the full board, and the API is a thin wrapper over pure,
+  side-effect-free engine functions.
+- **React UI** — board rendering, keyboard controls (arrows or W A S D), a live
+  score, start/reset, and win/lose feedback.
+- **Two move advisers** — an offline expectimax search (the default **Ask AI**)
+  and an optional remote LLM (**Ask Claude**), with the backend validating the
+  model's answer against the legal moves before returning it (details below).
 
 ## API
 
@@ -188,8 +183,8 @@ The offline expectimax is the **primary** adviser; the LLM is an optional extra.
 A general-purpose large language model is not the best tool for the *core* of
 this problem:
 
-- **It is the simplest thing that fits.** The required adviser must run
-  **offline**, and the local expectimax does so with no API key, no network
+- **It is the simplest thing that fits.** The required adviser can run
+  **offline**, with no API key, no network
   call, and no extra dependencies. A hosted model (Claude, ChatGPT, etc.) means
   a network round-trip plus a secret to manage (in a git-ignored `.env`).
 - **2048 is exact search, not language.** The game has clear rules, a small
@@ -352,25 +347,8 @@ npm run format:check  # Prettier — verify only
 
 ## Assumptions
 
-- The board is 4×4.
+Where the exercise leaves a choice open, the project assumes:
+
+- The board is a square grid (default 4×4, configurable in `config.py`).
 - Empty cells are represented as `None` in Python and `null` in JSON.
-- A move is valid only if it changes the board.
-- A new tile (`2` or `4`) is added only after a valid move.
-- The game is won when any tile reaches `2048`.
-- The game is lost when there are no empty cells and no valid moves.
-- The default AI runs offline via a heuristic expectimax evaluator. An optional
-  remote LLM adviser is available when an `ANTHROPIC_API_KEY` is configured.
-
-## Status
-
-- ✅ Engine, stateless API, and React UI (board, keyboard moves, score,
-  start/reset, win/lose) are implemented and tested.
-- ✅ Offline expectimax AI adviser (`ai.py`) with heuristic evaluation that
-  suggests the best move is implemented and tested.
-- ✅ The AI is exposed over the API (`POST /api/ai`) and wired into the UI via
-  the **Ask AI** button (with a "Thinking" overlay and a client-side cache).
-- ✅ Optional remote LLM adviser (`llm.py`, Anthropic Claude) is exposed over
-  the API (`POST /api/llm`) and wired into the UI via the **Ask Claude** button;
-  the backend validates the model's answer against the legal moves and the key
-  is read from a git-ignored `.env`. Covered by `test_llm.py` and `test_api.py`
-  with the network call mocked.
+- A spawned tile is a `2` 90% of the time and a `4` the other 10%.
